@@ -108,8 +108,8 @@ Default: off.
 Rotate the display clockwise or counterclockwise.  This mode is unaccelerated.
 Default: no rotation.
 
-Note: Option Rotate does not work unless the Resize and Rotate extension has
-been turned off.
+Note: The Resize and Rotate extension will be disabled if the Rotate option
+is used.
 .TP
 .BI "Option \*qShadowFB\*q \*q" boolean \*q
 Enable or disable use of the shadow framebuffer layer.  Default: off.

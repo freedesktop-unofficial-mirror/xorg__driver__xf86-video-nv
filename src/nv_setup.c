@@ -292,7 +292,7 @@ static void nv10GetConfig (NVPtr pNv)
     }
 #endif
 
-    if((pNv->Chipset && 0xffff) == 0x01a0) {
+    if((pNv->Chipset & 0xffff) == 0x01a0) {
         int amt = pciReadLong(pciTag(0, 0, 1), 0x7C);
         pNv->RamAmountKBytes = (((amt >> 6) & 31) + 1) * 1024;
     } else if((pNv->Chipset & 0xffff) == 0x01f0) {

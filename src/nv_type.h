@@ -63,6 +63,8 @@ typedef struct _riva_hw_state
     U032 cursor0;
     U032 cursor1;
     U032 cursor2;
+    U032 timingH;
+    U032 timingV;
 } RIVA_HW_STATE, *NVRegPtr;
 
 

@@ -236,6 +236,9 @@ NVDACInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     } else
        nvReg->cursorConfig |= 0x02000000;
 
+    nvReg->timingH = 0;
+    nvReg->timingV = 0;
+
     return (TRUE);
 }
 
