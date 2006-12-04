@@ -26,8 +26,6 @@ AC_INIT([xf86-video-nv],
         [https://bugs.freedesktop.org/enter_bug.cgi?product=xorg],
         xf86-video-nv)
 
-XORG_RELEASE_VERSION
-
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_AUX_DIR(.)
