@@ -440,12 +440,6 @@ static const char *int10Symbols[] = {
     NULL
 };
 
-static const char *rivaSymbols[] = {
-   "RivaGetScrnInfoRec",
-   "RivaAvailableOptions",
-    NULL
-};
-
 
 #ifdef XFree86LOADER
 
@@ -558,7 +552,7 @@ nvSetup(pointer module, pointer opts, int *errmaj, int *errmin)
          * might refer to.
          */
         LoaderRefSymLists(vgahwSymbols, xaaSymbols, fbSymbols,
-                          ramdacSymbols, shadowSymbols, rivaSymbols,
+                          ramdacSymbols, shadowSymbols,
                           i2cSymbols, ddcSymbols, vbeSymbols,
                           fbdevHWSymbols, int10Symbols, NULL);
 
@@ -580,10 +574,7 @@ static const OptionInfoRec *
 NVAvailableOptions(int chipid, int busid)
 {
     if(chipid == 0x12D20018) {
-	if (!xf86LoadOneModule("riva128", NULL)) {
-	    return NULL;
-	} else
-	    return RivaAvailableOptions(chipid, busid);
+        return RivaAvailableOptions(chipid, busid);
     }
     
     return NVOptions;
@@ -769,10 +760,6 @@ NVProbe(DriverPtr drv, int flags)
 
         pPci = xf86GetPciInfoForEntity(usedChips[i]);
         if(pPci->vendor == PCI_VENDOR_NVIDIA_SGS) {
-            if (!xf86LoadDrvSubModule(drv, "riva128")) {
-                  continue;
-            }
-            xf86LoaderReqSymLists(rivaSymbols, NULL);
             if(RivaGetScrnInfoRec(NVPciChipsets, usedChips[i]))
                 foundScreen = TRUE;
         } else {
