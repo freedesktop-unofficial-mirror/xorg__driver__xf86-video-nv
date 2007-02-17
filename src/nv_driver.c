@@ -37,6 +37,7 @@
 
 const   OptionInfoRec * RivaAvailableOptions(int chipid, int busid);
 Bool    RivaGetScrnInfoRec(PciChipsets *chips, int chip);
+Bool    G80GetScrnInfoRec(PciChipsets *chips, int chip);
 
 /*
  * Forward definitions for the functions that make up the driver.
@@ -331,6 +332,13 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0242, "GeForce 6100" },
   { 0x10DE0244, "GeForce Go 6150" },
   { 0x10DE0247, "GeForce Go 6100" },
+
+#if SUPPORT_G80
+  { 0x10DE0191, "GeForce 8800 GTX" },
+  { 0x10DE0193, "GeForce 8800 GTS" },
+  { 0x10DE019D, "Quadro FX 5600" },
+  { 0x10DE019E, "Quadro FX 4600" },
+#endif
 
   {-1, NULL}
 };
@@ -647,6 +655,20 @@ NVGetPCIXpressChip (pciVideoPtr pVideo)
     return pciid;
 }
 
+#if SUPPORT_G80
+static Bool
+NVIsG80(int chipType)
+{
+    switch(chipType & 0xfff0) {
+        case 0x0190:
+        case 0x0400:
+        case 0x0420:
+            return TRUE;
+    }
+
+    return FALSE;
+}
+#endif
 
 /* Mandatory */
 static Bool
@@ -700,6 +722,8 @@ NVProbe(DriverPtr drv, int flags)
                NVPciChipsets[numUsed].resList = RES_SHARED_VGA;
                numUsed++;
             } else if ((*ppPci)->vendor == PCI_VENDOR_NVIDIA) {
+               Bool canHandle = FALSE;
+
                /* look for a compatible devices which may be newer than 
                   the NVKnownChipsets list above.  */
                switch(token & 0xfff0) {
@@ -725,14 +749,23 @@ NVProbe(DriverPtr drv, int flags)
                case 0x0290:
                case 0x0390:
                case 0x03D0:
+                   canHandle = TRUE;
+                   break;
+               default:  break;  /* we don't recognize it */
+               }
+
+#if SUPPORT_G80
+               if(NVIsG80((*ppPci)->chipType))
+                   canHandle = TRUE;
+#endif
+
+               if(canHandle) {
                    NVChipsets[numUsed].token = pciid;
                    NVChipsets[numUsed].name = "Unknown NVIDIA chip";
                    NVPciChipsets[numUsed].numChipset = pciid;
                    NVPciChipsets[numUsed].PCIid = pciid;
                    NVPciChipsets[numUsed].resList = RES_SHARED_VGA;
                    numUsed++;
-                   break;
-               default:  break;  /* we don't recognize it */
                }
             }
         }
@@ -762,6 +795,11 @@ NVProbe(DriverPtr drv, int flags)
         if(pPci->vendor == PCI_VENDOR_NVIDIA_SGS) {
             if(RivaGetScrnInfoRec(NVPciChipsets, usedChips[i]))
                 foundScreen = TRUE;
+#if SUPPORT_G80
+        } else if (NVIsG80(pPci->chipType)) {
+            if(G80GetScrnInfoRec(NVPciChipsets, usedChips[i]))
+                foundScreen = TRUE;
+#endif
         } else {
             if(NVGetScrnInfoRec(NVPciChipsets, usedChips[i])) 
 	        foundScreen = TRUE;

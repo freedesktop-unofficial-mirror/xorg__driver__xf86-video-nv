@@ -28,7 +28,9 @@ nv_drv_la_LTLIBRARIES = nv_drv.la
 nv_drv_la_LDFLAGS = -module -avoid-version
 nv_drv_ladir = @moduledir@/drivers
 
-nv_drv_la_SOURCES = \
+nv_drv_la_SOURCES = $(nv_sources) $(riva_sources) $(g80_sources)
+
+nv_sources = \
          nv_const.h \
          nv_cursor.c \
          nv_dac.c \
@@ -45,7 +47,9 @@ nv_drv_la_SOURCES = \
          nv_type.h \
          nvvga.h \
          nv_video.c \
-         nv_xaa.c \
+         nv_xaa.c
+
+riva_sources = \
          riva_const.h \
          riva_cursor.c \
          riva_dac.c \
@@ -61,3 +65,19 @@ nv_drv_la_SOURCES = \
          riva_tbl.h \
          riva_type.h \
          riva_xaa.c
+
+if SUPPORT_G80
+g80_sources = \
+         g80_cursor.c \
+         g80_cursor.h \
+         g80_ddc.c \
+         g80_ddc.h \
+         g80_display.c \
+         g80_display.h \
+         g80_dma.c \
+         g80_dma.h \
+         g80_driver.c \
+         g80_type.h \
+         g80_xaa.c \
+         g80_xaa.h
+endif
