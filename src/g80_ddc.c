@@ -197,22 +197,19 @@ Bool G80ProbeDDC(ScrnInfoPtr pScrn)
 
         flatPanel = (monInfo->features.input_type == 1);
 
-        if(flatPanel) {
-            if(pNv->i2cMap[port].sor == -1) {
-                xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "Saw a flat panel EDID "
-                    "on I2C port %i but no SOR outputs were registered for "
-                    "that port.\n", port);
-                continue;
-            }
+        if(pNv->i2cMap[port].dac != -1 &&
+           G80DispDetectLoad(pScrn, pNv->i2cMap[port].dac)) {
+            pNv->orType = DAC;
+            pNv->or = pNv->i2cMap[port].dac;
+        } else if(pNv->i2cMap[port].sor != -1) {
             pNv->orType = SOR;
             pNv->or = pNv->i2cMap[port].sor;
         } else {
-            if(pNv->i2cMap[port].dac == -1) {
-                xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "Saw a flat panel EDID "
-                    "on I2C port %i but no DAC outputs were registered for "
-                    "that port.\n", port);
-                continue;
-            }
+            xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                       "Saw an EDID on I2C port %i but no DAC load was "
+                       "detected and no SOR is connected to this port.  Using "
+                       "DAC%i.\n", port,
+                       pNv->or);
             pNv->orType = DAC;
             pNv->or = pNv->i2cMap[port].dac;
         }
@@ -220,7 +217,7 @@ Bool G80ProbeDDC(ScrnInfoPtr pScrn)
         xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
                    "Found a %s on I2C port %i, assigning %s%i\n",
                    flatPanel ? "flat panel" : "CRT",
-                   port, flatPanel ? "SOR" : "DAC", pNv->or);
+                   port, pNv->orType == SOR ? "SOR" : "DAC", pNv->or);
 
         pScrn->monitor->DDC = monInfo;
         xf86SetDDCproperties(pScrn, monInfo);

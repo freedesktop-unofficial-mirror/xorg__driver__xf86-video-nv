@@ -187,6 +187,28 @@ G80DispCommand(G80Ptr pNv, CARD32 addr, CARD32 data)
 #define C(mthd, data) G80DispCommand(pNv, (mthd), (data))
 
 /*
+ * Performs load detection on a single DAC.
+ */
+Bool G80DispDetectLoad(ScrnInfoPtr pScrn, ORNum or)
+{
+    G80Ptr pNv = G80PTR(pScrn);
+    const int dacOff = 2048 * or;
+    CARD32 load, tmp;
+
+    pNv->reg[(0x0061A010+dacOff)/4] = 0x00000001;
+    pNv->reg[(0x0061A004+dacOff)/4] = 0x80150000;
+    while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
+    tmp = pNv->architecture == 0x50 ? 420 : 340;
+    pNv->reg[(0x0061A00C+dacOff)/4] = tmp | 0x100000;
+    usleep(4500);
+    load = pNv->reg[(0x0061A00C+dacOff)/4];
+    pNv->reg[(0x0061A00C+dacOff)/4] = 0;
+    pNv->reg[(0x0061A004+dacOff)/4] = 0x80550000;
+
+    return (load & 0x38000000) == 0x38000000;
+}
+
+/*
  * Performs load detection on the DACs.  Sets pNv->orType and pNv->or
  * accordingly.
  */
@@ -199,21 +221,9 @@ Bool G80LoadDetect(ScrnInfoPtr pScrn)
     pNv->orType = DAC;
 
     for(or = DAC0; or <= DAC2; or++) {
-        const int dacOff = 2048 * or;
-        CARD32 load, tmp;
-
         xf86DrvMsg(scrnIndex, X_PROBED, "Trying load detection on DAC%i ... ", or);
 
-        pNv->reg[(0x0061A010+dacOff)/4] = 0x00000001;
-        pNv->reg[(0x0061A004+dacOff)/4] = 0x80150000;
-        while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
-        tmp = pNv->architecture == 0x50 ? 420 : 340;
-        pNv->reg[(0x0061A00C+dacOff)/4] = tmp | 0x100000;
-        usleep(4500);
-        load = pNv->reg[(0x0061A00C+dacOff)/4];
-        pNv->reg[(0x0061A00C+dacOff)/4] = 0;
-        pNv->reg[(0x0061A004+dacOff)/4] = 0x80550000;
-        if((load & 0x38000000) == 0x38000000) {
+        if(G80DispDetectLoad(pScrn, or)) {
             xf86ErrorF("found one!\n");
             pNv->or = or;
             return TRUE;

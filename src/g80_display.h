@@ -1,4 +1,5 @@
 Bool G80LoadDetect(ScrnInfoPtr);
+Bool G80DispLoadDetect(ScrnInfoPtr, ORNum or);
 Bool G80DispInit(ScrnInfoPtr);
 Bool G80DispSetMode(ScrnInfoPtr, DisplayModePtr);
 void G80DispShutdown(ScrnInfoPtr);
