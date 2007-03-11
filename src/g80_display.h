@@ -1,10 +1,16 @@
-Bool G80LoadDetect(ScrnInfoPtr);
-Bool G80DispLoadDetect(ScrnInfoPtr, ORNum or);
+Bool G80DispPreInit(ScrnInfoPtr);
 Bool G80DispInit(ScrnInfoPtr);
-Bool G80DispSetMode(ScrnInfoPtr, DisplayModePtr);
 void G80DispShutdown(ScrnInfoPtr);
-void G80DispAdjustFrame(G80Ptr pNv, int x, int y);
-void G80DispBlankScreen(ScrnInfoPtr, Bool blank);
-void G80DispDPMSSet(ScrnInfoPtr, int mode, int flags);
-void G80DispShowCursor(G80Ptr, Bool update);
-void G80DispHideCursor(G80Ptr, Bool update);
+
+void G80DispCommand(ScrnInfoPtr, CARD32 addr, CARD32 data);
+#define C(mthd, data) G80DispCommand(pScrn, (mthd), (data))
+
+Head G80CrtcGetHead(xf86CrtcPtr);
+
+void G80CrtcBlankScreen(xf86CrtcPtr, Bool blank);
+void G80CrtcEnableCursor(xf86CrtcPtr, Bool update);
+void G80CrtcDisableCursor(xf86CrtcPtr, Bool update);
+void G80CrtcSetCursorPosition(xf86CrtcPtr, int x, int y);
+void G80CrtcSetDither(xf86CrtcPtr, CARD32 mask, CARD32 val);
+
+void G80DispCreateCrtcs(ScrnInfoPtr pScrn);

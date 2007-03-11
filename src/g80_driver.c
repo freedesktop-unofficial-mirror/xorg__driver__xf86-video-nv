@@ -119,6 +119,39 @@ G80FreeRec(ScrnInfoPtr pScrn)
     pScrn->driverPrivate = NULL;
 }
 
+G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
+{
+    G80Ptr pNv = G80PTR(pScrn);
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    int pitch = width * (pScrn->bitsPerPixel / 8);
+    int i;
+
+    pitch = (pitch + 255) & ~255;
+
+    ErrorF("Resizing screen to %ix%i\n", width, height);
+    pScrn->virtualX = width;
+    pScrn->virtualY = height;
+
+    /* Can resize if XAA is disabled */
+    if(!pNv->xaa) {
+        (*pScrn->pScreen->GetScreenPixmap)(pScrn->pScreen)->devKind = pitch;
+        pScrn->displayWidth = pitch / (pScrn->bitsPerPixel / 8);
+
+        /* Re-set the modes so the new pitch is taken into account */
+        for(i = 0; i < xf86_config->num_crtc; i++) {
+            xf86CrtcPtr crtc = xf86_config->crtc[i];
+            if(crtc->enabled)
+                xf86CrtcSetMode(crtc, &crtc->mode, crtc->rotation, crtc->x, crtc->y);
+        }
+    }
+
+    return TRUE;
+}
+
+static const xf86CrtcConfigFuncsRec randr12_screen_funcs = {
+    .resize = G80ResizeScreen,
+};
+
 static Bool
 G80PreInit(ScrnInfoPtr pScrn, int flags)
 {
@@ -126,10 +159,8 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     EntityInfoPtr pEnt;
     pciVideoPtr pPci;
     PCITAG pcitag;
-    ClockRangePtr clockRanges;
     MessageType from;
     Bool primary;
-    int i;
     char *s;
     const rgb zeros = {0, 0, 0};
     const Gamma gzeros = {0.0, 0.0, 0.0};
@@ -248,18 +279,6 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
 
     if(!xf86SetGamma(pScrn, gzeros)) goto fail;
 
-    /*
-     * Setup the ClockRanges, which describe what clock ranges are available,
-     * and what sort of modes they can be used for.
-     */
-    clockRanges = xnfcalloc(sizeof(ClockRange), 1);
-    clockRanges->next = NULL;
-    clockRanges->minClock = 0;
-    clockRanges->maxClock = 400000;
-    clockRanges->clockIndex = -1;       /* programmable */
-    clockRanges->doubleScanAllowed = TRUE;
-    clockRanges->interlaceAllowed = TRUE;
-
     /* Map memory */
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "MMIO registers at 0x%lx\n",
                pPci->memBase[0]);
@@ -308,33 +327,35 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     else
         pNv->table1 -= 0x10000;
 
-    /* Probe DDC */
-    /* If no DDC info found, try DAC load detection */
+    xf86CrtcConfigInit(pScrn, &randr12_screen_funcs);
+    xf86CrtcSetSizeRange(pScrn, 320, 200, 8192, 8192);
+
     if(!xf86LoadSubModule(pScrn, "i2c")) goto fail;
     if(!xf86LoadSubModule(pScrn, "ddc")) goto fail;
     xf86LoaderReqSymLists(i2cSymbols, ddcSymbols, NULL);
-    if(!G80ProbeDDC(pScrn) && !G80LoadDetect(pScrn)) {
-        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No display devices found\n");
-        goto fail;
-    }
-    /* Hardcode HEAD0 for now.  RandR 1.2 will move this into a Crtc struct. */
-    pNv->head = 0;
 
-    i = xf86ValidateModes(pScrn, pScrn->monitor->Modes,
-                          pScrn->display->modes, clockRanges,
-                          NULL, 256, 8192,
-                          512, 128, 8192,
-                          pScrn->display->virtualX,
-                          pScrn->display->virtualY,
-                          pNv->videoRam * 1024 - G80_RESERVED_VIDMEM,
-                          LOOKUP_BEST_REFRESH);
-    if(i == -1) goto fail;
-    xf86PruneDriverModes(pScrn);
-    if(i == 0 || !pScrn->modes) {
-        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No valid modes found\n");
+    if(!G80DispPreInit(pScrn)) goto fail;
+    /* Read the DDC routing table and create outputs */
+    if(!G80CreateOutputs(pScrn)) goto fail;
+    /* Create the crtcs */
+    G80DispCreateCrtcs(pScrn);
+
+    /* We can grow the desktop if XAA is disabled */
+    if(!xf86InitialConfiguration(pScrn, pNv->NoAccel)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+            "No valid initial configuration found\n");
         goto fail;
     }
-    xf86SetCrtcForModes(pScrn, 0);
+    pScrn->displayWidth = (pScrn->virtualX + 255) & ~255;
+
+    if(!xf86RandR12PreInit(pScrn)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "RandR initialization failure\n");
+        goto fail;
+    }
+    if(!pScrn->modes) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No modes\n");
+        goto fail;
+    }
 
     pScrn->currentMode = pScrn->modes;
     xf86PrintModes(pScrn);
@@ -381,10 +402,12 @@ AcquireDisplay(ScrnInfoPtr pScrn)
 #if 0
     if(!G80CursorAcquire(pNv))
         return FALSE;
-#endif
     if(!G80DispSetMode(pScrn, pScrn->currentMode))
         return FALSE;
     G80DispDPMSSet(pScrn, DPMSModeOn, 0);
+#endif
+    ErrorF("TODO: Set the current config, rather than using xf86SetSingleMode\n");
+    xf86SetSingleMode(pScrn, pScrn->currentMode, RR_Rotate_0);
 
     return TRUE;
 }
@@ -443,6 +466,7 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
     pScrn->vtSema = FALSE;
     pScreen->CloseScreen = pNv->CloseScreen;
     pScreen->BlockHandler = pNv->BlockHandler;
+    pScreen->CreateScreenResources = pNv->CreateScreenResources;
     return (*pScreen->CloseScreen)(scrnIndex, pScreen);
 }
 
@@ -468,10 +492,25 @@ G80SaveScreen(ScreenPtr pScreen, int mode)
 
     if(!pScrn->vtSema) return FALSE;
 
-    G80DispBlankScreen(pScrn, !xf86IsUnblank(mode));
+    ErrorF("SaveScreen unimplemented\n");
 
-    return TRUE;
+    return FALSE;
 }
+
+static Bool
+G80CreateScreenResources(ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    G80Ptr pNv = G80PTR(pScrn);
+
+    pScreen->CreateScreenResources = pNv->CreateScreenResources;
+    if(!(*pScreen->CreateScreenResources)(pScreen))
+        return FALSE;
+
+    if(!xf86RandR12CreateScreenResources(pScreen))
+        return FALSE;
+    return TRUE;
+ }
 
 static void
 G80InitHW(ScrnInfoPtr pScrn)
@@ -710,8 +749,6 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     /* pad the screen pitch to 256 bytes */
     pitch = pScrn->displayWidth * (pScrn->bitsPerPixel / 8);
-    pitch = (pitch + 0xff) & ~0xff;
-    pScrn->displayWidth = pitch / (pScrn->bitsPerPixel / 8);
 
     /* fb init */
     if(!fbScreenInit(pScreen, pNv->mem,
@@ -758,7 +795,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         if(!G80XAAInit(pScreen)) {
             xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
                        "Hardware acceleration initialization failed\n");
-            pNv->NoAccel = FALSE;
+            return FALSE;
         }
     }
 
@@ -789,7 +826,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
                             CMAP_PALETTED_TRUECOLOR))
         return FALSE;
 
-    xf86DPMSInit(pScreen, G80DispDPMSSet, 0);
+    xf86DPMSInit(pScreen, xf86DPMSSet, 0);
 
     /* Clear the screen */
     if(pNv->xaa) {
@@ -809,11 +846,19 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     pScreen->SaveScreen = G80SaveScreen;
 
+    pNv->CreateScreenResources =  pScreen->CreateScreenResources;
+    pScreen->CreateScreenResources = G80CreateScreenResources;
+
     pNv->CloseScreen = pScreen->CloseScreen;
     pScreen->CloseScreen = G80CloseScreen;
 
     pNv->BlockHandler = pScreen->BlockHandler;
     pScreen->BlockHandler = G80BlockHandler;
+
+    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "RandR 1.2 enabled. Please ignore the following RandR disabled message.\n");
+    xf86DisableRandR();
+    xf86RandR12Init(pScreen);
+    xf86RandR12SetRotations(pScreen, RR_Rotate_0);
 
     return TRUE;
 }
@@ -828,22 +873,13 @@ static Bool
 G80SwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
 {
     ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
-
-    return G80DispSetMode(pScrn, mode);
+    return xf86SetSingleMode(pScrn, mode, RR_Rotate_0);
 }
 
 static void
 G80AdjustFrame(int scrnIndex, int x, int y, int flags)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
-    G80Ptr pNv = G80PTR(pScrn);
-
-    if(x + pScrn->currentMode->HDisplay > pScrn->virtualX ||
-       y + pScrn->currentMode->VDisplay > pScrn->virtualY ||
-       x < 0 || y < 0)
-        /* Ignore bogus panning */
-        return;
-    G80DispAdjustFrame(pNv, x, y);
+    ErrorF("AdjustFrame unimplemented\n");
 }
 
 static Bool

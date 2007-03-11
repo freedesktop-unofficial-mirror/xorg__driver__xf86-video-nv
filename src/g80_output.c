@@ -31,6 +31,7 @@
 
 #include "g80_type.h"
 #include "g80_ddc.h"
+#include "g80_output.h"
 
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
 {
@@ -110,7 +111,7 @@ fail:
 static void G80_I2CPutBits(I2CBusPtr b, int clock, int data)
 {
     G80Ptr pNv = G80PTR(xf86Screens[b->scrnIndex]);
-    const int off = b->DriverPrivate.val;
+    const int off = b->DriverPrivate.val * 0x18;
 
     pNv->reg[(0x0000E138+off)/4] = 4 | clock | data << 1;
 }
@@ -118,7 +119,7 @@ static void G80_I2CPutBits(I2CBusPtr b, int clock, int data)
 static void G80_I2CGetBits(I2CBusPtr b, int *clock, int *data)
 {
     G80Ptr pNv = G80PTR(xf86Screens[b->scrnIndex]);
-    const int off = b->DriverPrivate.val;
+    const int off = b->DriverPrivate.val * 0x18;
     unsigned char val;
 
     val = pNv->reg[(0x0000E138+off)/4];
@@ -126,19 +127,18 @@ static void G80_I2CGetBits(I2CBusPtr b, int *clock, int *data)
     *data = !!(val & 2);
 }
 
-static xf86MonPtr G80ProbeDDCBus(ScrnInfoPtr pScrn, int bus)
+Bool
+G80I2CInit(xf86OutputPtr output, const int port)
 {
-    G80Ptr pNv = G80PTR(pScrn);
+    G80OutputPrivPtr pPriv = output->driver_private;
     I2CBusPtr i2c;
-    xf86MonPtr monInfo = NULL;
-    const int off = bus * 0x18;
 
     /* Allocate the I2C bus structure */
     i2c = xf86CreateI2CBusRec();
-    if(!i2c) return NULL;
+    if(!i2c) return FALSE;
 
-    i2c->BusName = "DDC";
-    i2c->scrnIndex = pScrn->scrnIndex;
+    i2c->BusName = output->name;
+    i2c->scrnIndex = output->scrn->scrnIndex;
     i2c->I2CPutBits = G80_I2CPutBits;
     i2c->I2CGetBits = G80_I2CGetBits;
     i2c->ByteTimeout = 2200; /* VESA DDC spec 3 p. 43 (+10 %) */
@@ -146,16 +146,69 @@ static xf86MonPtr G80ProbeDDCBus(ScrnInfoPtr pScrn, int bus)
     i2c->BitTimeout = 40;
     i2c->ByteTimeout = 40;
     i2c->AcknTimeout = 40;
-    i2c->DriverPrivate.val = off;
+    i2c->DriverPrivate.val = port;
 
-    if(!xf86I2CBusInit(i2c)) goto done;
+    if(xf86I2CBusInit(i2c)) {
+        pPriv->i2c = i2c;
+        return TRUE;
+    } else {
+        xfree(i2c);
+        return FALSE;
+    }
+}
 
-    pNv->reg[(0x0000E138+off)/4] = 7;
+void
+G80OutputSetPClk(xf86OutputPtr output, int pclk)
+{
+    G80OutputPrivPtr pPriv = output->driver_private;
+    pPriv->set_pclk(output, pclk);
+}
+
+int
+G80OutputModeValid(xf86OutputPtr output, DisplayModePtr mode)
+{
+    if(mode->Clock > 400000 || mode->Clock < 25000)
+        return MODE_CLOCK_RANGE;
+
+    return MODE_OK;
+}
+
+Bool
+G80OutputModeFixup(xf86OutputPtr output, DisplayModePtr mode,
+                   DisplayModePtr adjusted_mode)
+{
+    return TRUE;
+}
+
+void
+G80OutputPrepare(xf86OutputPtr output)
+{
+}
+
+void
+G80OutputCommit(xf86OutputPtr output)
+{
+}
+
+DisplayModePtr
+G80OutputGetDDCModes(xf86OutputPtr output)
+{
+    ScrnInfoPtr pScrn = output->scrn;
+    G80Ptr pNv = G80PTR(pScrn);
+    G80OutputPrivPtr pPriv = output->driver_private;
+    I2CBusPtr i2c = pPriv->i2c;
+    xf86MonPtr monInfo = NULL;
+    DisplayModePtr modes;
+    const int bus = i2c->DriverPrivate.val, off = bus * 0x18;
+
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
             "Probing for EDID on I2C bus %i...\n", bus);
-    monInfo = xf86DoEDID_DDC2(pScrn->scrnIndex, i2c);
-
+    pNv->reg[(0x0000E138+off)/4] = 7;
+    monInfo = xf86OutputGetEDID(output, i2c);
     pNv->reg[(0x0000E138+off)/4] = 3;
+
+    xf86OutputSetEDID(output, monInfo);
+    modes = xf86OutputGetEDIDModes(output);
 
     if(monInfo) {
         xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
@@ -166,64 +219,46 @@ static xf86MonPtr G80ProbeDDCBus(ScrnInfoPtr pScrn, int bus)
         xf86DrvMsg(pScrn->scrnIndex, X_INFO, "  ... none found\n");
     }
 
-done:
-    xf86DestroyI2CBusRec(i2c, TRUE, TRUE);
-
-    return monInfo;
+    return modes;
 }
 
-/*
- * Try DDC on each bus until we find one that works.
- */
-Bool G80ProbeDDC(ScrnInfoPtr pScrn)
+void
+G80OutputDestroy(xf86OutputPtr output)
+{
+    G80OutputPrivPtr pPriv = output->driver_private;
+
+    xf86DestroyI2CBusRec(pPriv->i2c, TRUE, TRUE);
+    pPriv->i2c = NULL;
+}
+
+Bool
+G80CreateOutputs(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
-    xf86MonPtr monInfo;
-    int port;
-    Bool flatPanel;
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    int i, count = 0;
 
     if(!G80ReadPortMapping(pScrn->scrnIndex, pNv))
         return FALSE;
 
-    for(port = 0; port < 4; port++) {
-        if(pNv->i2cMap[port].dac == -1 && pNv->i2cMap[port].sor == -1)
-            /* No outputs on this port.  Skip it. */
-            continue;
-
-        monInfo = G80ProbeDDCBus(pScrn, port);
-        if(!monInfo)
-            /* No EDID on this port. */
-            continue;
-
-        flatPanel = (monInfo->features.input_type == 1);
-
-        if(pNv->i2cMap[port].dac != -1 &&
-           G80DispDetectLoad(pScrn, pNv->i2cMap[port].dac)) {
-            pNv->orType = DAC;
-            pNv->or = pNv->i2cMap[port].dac;
-        } else if(pNv->i2cMap[port].sor != -1) {
-            pNv->orType = SOR;
-            pNv->or = pNv->i2cMap[port].sor;
-        } else {
-            xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
-                       "Saw an EDID on I2C port %i but no DAC load was "
-                       "detected and no SOR is connected to this port.  Using "
-                       "DAC%i.\n", port,
-                       pNv->or);
-            pNv->orType = DAC;
-            pNv->or = pNv->i2cMap[port].dac;
-        }
-
-        xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-                   "Found a %s on I2C port %i, assigning %s%i\n",
-                   flatPanel ? "flat panel" : "CRT",
-                   port, pNv->orType == SOR ? "SOR" : "DAC", pNv->or);
-
-        pScrn->monitor->DDC = monInfo;
-        xf86SetDDCproperties(pScrn, monInfo);
-
-        return TRUE;
+    /* For each DDC port, create an output for the attached ORs */
+    for(i = 0; i < 4; i++) {
+        if(pNv->i2cMap[i].dac != -1)
+            G80CreateDac(pScrn, pNv->i2cMap[i].dac, i);
+        if(pNv->i2cMap[i].sor != -1)
+            G80CreateSor(pScrn, pNv->i2cMap[i].sor, i);
     }
 
-    return FALSE;
+    /* For each output, set the crtc and clone masks */
+    for(i = 0; i < xf86_config->num_output; i++) {
+        xf86OutputPtr output = xf86_config->output[i];
+        G80OutputPrivPtr pPriv = output->driver_private;
+
+        /* Any output can connect to any head */
+        output->possible_crtcs = 0x3;
+        output->possible_clones = 0;
+    }
+
+    return TRUE;
 }
+

@@ -33,9 +33,15 @@
 
 #include "g80_type.h"
 #include "g80_display.h"
+#include "g80_output.h"
 
 #define DPMS_SERVER
 #include <X11/extensions/dpms.h>
+
+typedef struct G80CrtcPrivRec {
+    Head head;
+    int pclk; /* Target pixel clock in kHz */
+} G80CrtcPrivRec, *G80CrtcPrivPtr;
 
 /*
  * PLL calculation.  pclk is in kHz.
@@ -137,8 +143,42 @@ G80CalcPLL(float pclk, int *pNA, int *pMA, int *pNB, int *pMB, int *pP)
 }
 
 static void
-G80DispCommand(G80Ptr pNv, CARD32 addr, CARD32 data)
+G80CrtcSetPClk(xf86CrtcPtr crtc)
 {
+    G80Ptr pNv = G80PTR(crtc->scrn);
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(crtc->scrn);
+    const int headOff = 0x800 * pPriv->head;
+    int lo_n, lo_m, hi_n, hi_m, p, i;
+    CARD32 lo = pNv->reg[(0x00614104+headOff)/4];
+    CARD32 hi = pNv->reg[(0x00614108+headOff)/4];
+
+    pNv->reg[(0x00614100+headOff)/4] = 0x10000610;
+    lo &= 0xff00ff00;
+    hi &= 0x8000ff00;
+
+    G80CalcPLL(pPriv->pclk, &lo_n, &lo_m, &hi_n, &hi_m, &p);
+
+    lo |= (lo_m << 16) | lo_n;
+    hi |= (p << 28) | (hi_m << 16) | hi_n;
+    pNv->reg[(0x00614104+headOff)/4] = lo;
+    pNv->reg[(0x00614108+headOff)/4] = hi;
+    pNv->reg[(0x00614200+headOff)/4] = 0;
+
+    for(i = 0; i < xf86_config->num_output; i++) {
+        xf86OutputPtr output = xf86_config->output[i];
+
+        if(output->crtc != crtc)
+            continue;
+        G80OutputSetPClk(output, pPriv->pclk);
+    }
+}
+
+void
+G80DispCommand(ScrnInfoPtr pScrn, CARD32 addr, CARD32 data)
+{
+    G80Ptr pNv = G80PTR(pScrn);
+
     pNv->reg[0x00610304/4] = data;
     pNv->reg[0x00610300/4] = addr | 0x80010001;
 
@@ -147,35 +187,17 @@ G80DispCommand(G80Ptr pNv, CARD32 addr, CARD32 data)
 
         if(super) {
             if(super == 2) {
-                const int headOff = 0x800 * pNv->head;
-                const int orOff = 0x800 * pNv->or;
+                xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+                const CARD32 r = pNv->reg[0x00610030/4];
+                int i;
 
-                if(pNv->reg[0x00610030/4] & 0x600) {
-                    int lo_n, lo_m, hi_n, hi_m, p;
-                    CARD32 lo = pNv->reg[(0x00614104+headOff)/4];
-                    CARD32 hi = pNv->reg[(0x00614108+headOff)/4];
+                for(i = 0; i < xf86_config->num_crtc; i++)
+                {
+                    xf86CrtcPtr crtc = xf86_config->crtc[i];
+                    G80CrtcPrivPtr pPriv = crtc->driver_private;
 
-                    pNv->reg[(0x00614100+headOff)/4] = 0x10000610;
-                    lo &= 0xff00ff00;
-                    hi &= 0x8000ff00;
-
-                    G80CalcPLL(pNv->pclk, &lo_n, &lo_m, &hi_n, &hi_m, &p);
-
-                    lo |= (lo_m << 16) | lo_n;
-                    hi |= (p << 28) | (hi_m << 16) | hi_n;
-                    pNv->reg[(0x00614104+headOff)/4] = lo;
-                    pNv->reg[(0x00614108+headOff)/4] = hi;
-                }
-
-                pNv->reg[(0x00614200+headOff)/4] = 0;
-                switch(pNv->orType) {
-                case DAC:
-                    pNv->reg[(0x00614280+orOff)/4] = 0;
-                    break;
-                case SOR:
-                    pNv->reg[(0x00614300+orOff)/4] =
-                        (pNv->pclk > 165000) ? 0x101 : 0;
-                    break;
+                    if(r & (0x200 << pPriv->head))
+                        G80CrtcSetPClk(crtc);
                 }
             }
 
@@ -184,59 +206,16 @@ G80DispCommand(G80Ptr pNv, CARD32 addr, CARD32 data)
         }
     }
 }
-#define C(mthd, data) G80DispCommand(pNv, (mthd), (data))
 
-/*
- * Performs load detection on a single DAC.
- */
-Bool G80DispDetectLoad(ScrnInfoPtr pScrn, ORNum or)
+Head
+G80CrtcGetHead(xf86CrtcPtr crtc)
 {
-    G80Ptr pNv = G80PTR(pScrn);
-    const int dacOff = 2048 * or;
-    CARD32 load, tmp;
-
-    pNv->reg[(0x0061A010+dacOff)/4] = 0x00000001;
-    pNv->reg[(0x0061A004+dacOff)/4] = 0x80150000;
-    while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
-    tmp = pNv->architecture == 0x50 ? 420 : 340;
-    pNv->reg[(0x0061A00C+dacOff)/4] = tmp | 0x100000;
-    usleep(4500);
-    load = pNv->reg[(0x0061A00C+dacOff)/4];
-    pNv->reg[(0x0061A00C+dacOff)/4] = 0;
-    pNv->reg[(0x0061A004+dacOff)/4] = 0x80550000;
-
-    return (load & 0x38000000) == 0x38000000;
-}
-
-/*
- * Performs load detection on the DACs.  Sets pNv->orType and pNv->or
- * accordingly.
- */
-Bool G80LoadDetect(ScrnInfoPtr pScrn)
-{
-    G80Ptr pNv = G80PTR(pScrn);
-    const int scrnIndex = pScrn->scrnIndex;
-    ORNum or;
-
-    pNv->orType = DAC;
-
-    for(or = DAC0; or <= DAC2; or++) {
-        xf86DrvMsg(scrnIndex, X_PROBED, "Trying load detection on DAC%i ... ", or);
-
-        if(G80DispDetectLoad(pScrn, or)) {
-            xf86ErrorF("found one!\n");
-            pNv->or = or;
-            return TRUE;
-        }
-
-        xf86ErrorF("nothing.\n");
-    }
-
-    return FALSE;
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
+    return pPriv->head;
 }
 
 Bool
-G80DispInit(ScrnInfoPtr pScrn)
+G80DispPreInit(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
 
@@ -269,6 +248,14 @@ G80DispInit(ScrnInfoPtr pScrn)
     pNv->reg[0x0061B004/4] = 0x80550000;
     pNv->reg[0x0061B010/4] = 0x00000001;
 
+    return TRUE;
+}
+
+Bool
+G80DispInit(ScrnInfoPtr pScrn)
+{
+    G80Ptr pNv = G80PTR(pScrn);
+
     if(pNv->reg[0x00610024/4] & 0x100) {
         pNv->reg[0x00610024/4] = 0x100;
         pNv->reg[0x006194E8/4] &= ~1;
@@ -295,65 +282,60 @@ void
 G80DispShutdown(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
-    CARD32 mask;
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    int i;
 
-    G80DispBlankScreen(pScrn, TRUE);
+    for(i = 0; i < xf86_config->num_crtc; i++) {
+        xf86CrtcPtr crtc = xf86_config->crtc[i];
 
-    mask = 4 << pNv->head;
-    pNv->reg[0x00610024/4] = mask;
-    while(!(pNv->reg[0x00610024/4] & mask));
+        G80CrtcBlankScreen(crtc, TRUE);
+    }
+
+    C(0x00000080, 0);
+
+    for(i = 0; i < xf86_config->num_crtc; i++) {
+        xf86CrtcPtr crtc = xf86_config->crtc[i];
+
+        if(crtc->enabled) {
+            const CARD32 mask = 4 << G80CrtcGetHead(crtc);
+
+            pNv->reg[0x00610024/4] = mask;
+            while(!(pNv->reg[0x00610024/4] & mask));
+        }
+    }
+
     pNv->reg[0x00610200/4] = 0;
     pNv->reg[0x00610300/4] = 0;
     while((pNv->reg[0x00610200/4] & 0x1e0000) != 0);
 }
 
-static void
-setupDAC(G80Ptr pNv, Head head, ORNum or, DisplayModePtr mode)
+static Bool
+G80CrtcModeFixup(xf86CrtcPtr crtc,
+                 DisplayModePtr mode, DisplayModePtr adjusted_mode)
 {
-    const int dacOff = 0x80 * pNv->or;
-
-    C(0x00000400 + dacOff, (head == HEAD0 ? 1 : 2) | 0x40);
-    C(0x00000404 + dacOff,
-        (mode->Flags & V_NHSYNC) ? 1 : 0 |
-        (mode->Flags & V_NVSYNC) ? 2 : 0);
+    // TODO: Fix up the mode here
+    return TRUE;
 }
 
 static void
-setupSOR(G80Ptr pNv, Head head, ORNum or, DisplayModePtr mode)
+G80CrtcModeSet(xf86CrtcPtr crtc, DisplayModePtr mode,
+               DisplayModePtr adjusted_mode, int x, int y)
 {
-    const int sorOff = 0x40 * pNv->or;
-
-    C(0x00000600 + sorOff,
-        (head == HEAD0 ? 1 : 2) |
-        (mode->SynthClock > 165000 ? 0x500 : 0x100) |
-        ((mode->Flags & V_NHSYNC) ? 0x1000 : 0) |
-        ((mode->Flags & V_NVSYNC) ? 0x2000 : 0));
-}
-
-Bool
-G80DispSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode)
-{
+    ScrnInfoPtr pScrn = crtc->scrn;
     G80Ptr pNv = G80PTR(pScrn);
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
     const int HDisplay = mode->HDisplay, VDisplay = mode->VDisplay;
-    const int headOff = 0x400 * pNv->head;
+    const int headOff = 0x400 * G80CrtcGetHead(crtc);
     int interlaceDiv, fudge;
 
-    pNv->pclk = mode->SynthClock;
+    // TODO: Use adjusted_mode and fix it up in G80CrtcModeFixup
+    pPriv->pclk = mode->Clock;
 
     /* Magic mode timing fudge factor */
     fudge = ((mode->Flags & V_INTERLACE) && (mode->Flags & V_DBLSCAN)) ? 2 : 1;
     interlaceDiv = (mode->Flags & V_INTERLACE) ? 2 : 1;
 
-    switch(pNv->orType) {
-    case DAC:
-        setupDAC(pNv, pNv->head, pNv->or, mode);
-        break;
-    case SOR:
-        setupSOR(pNv, pNv->head, pNv->or, mode);
-        break;
-    }
-
-    C(0x00000804 + headOff, mode->SynthClock | 0x800000);
+    C(0x00000804 + headOff, mode->Clock | 0x800000);
     C(0x00000808 + headOff, (mode->Flags & V_INTERLACE) ? 2 : 0);
     C(0x00000810 + headOff, 0);
     C(0x0000082C + headOff, 0);
@@ -388,41 +370,24 @@ G80DispSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode)
         C(0x000008A4 + headOff, 0);
     }
     C(0x000008A8 + headOff, 0x40000);
-    /* Use the screen's panning, but not if it's bogus */
-    if(pScrn->frameX0 >= 0 && pScrn->frameY0 >= 0 &&
-       pScrn->frameX0 + HDisplay <= pScrn->virtualX &&
-       pScrn->frameY0 + VDisplay <= pScrn->virtualY) {
-        C(0x000008C0 + headOff, pScrn->frameY0 << 16 | pScrn->frameX0);
-    } else {
-        C(0x000008C0 + headOff, 0);
-    }
+    C(0x000008C0 + headOff, y << 16 | x);
     C(0x000008C8 + headOff, VDisplay << 16 | HDisplay);
     C(0x000008D4 + headOff, 0);
     C(0x000008D8 + headOff, mode->CrtcVDisplay << 16 | mode->CrtcHDisplay);
     C(0x000008DC + headOff, mode->CrtcVDisplay << 16 | mode->CrtcHDisplay);
 
-    G80DispBlankScreen(pScrn, FALSE);
-
-    return TRUE;
+    G80CrtcBlankScreen(crtc, FALSE);
 }
 
 void
-G80DispAdjustFrame(G80Ptr pNv, int x, int y)
+G80CrtcBlankScreen(xf86CrtcPtr crtc, Bool blank)
 {
-    const int headOff = 0x400 * pNv->head;
-
-    C(0x000008C0 + headOff, y << 16 | x);
-    C(0x00000080, 0);
-}
-
-void
-G80DispBlankScreen(ScrnInfoPtr pScrn, Bool blank)
-{
+    ScrnInfoPtr pScrn = crtc->scrn;
     G80Ptr pNv = G80PTR(pScrn);
-    const int headOff = 0x400 * pNv->head;
+    const int headOff = 0x400 * G80CrtcGetHead(crtc);
 
     if(blank) {
-        G80DispHideCursor(pNv, FALSE);
+        // G80DispHideCursor(pNv, FALSE);
 
         C(0x00000840 + headOff, 0);
         C(0x00000844 + headOff, 0);
@@ -441,21 +406,21 @@ G80DispBlankScreen(ScrnInfoPtr pScrn, Bool blank)
         C(0x00000884 + headOff, (pNv->videoRam << 2) - 0x40);
         if(pNv->architecture != 0x50)
             C(0x0000089C + headOff, 1);
-        if(pNv->cursorVisible)
-            G80DispShowCursor(pNv, FALSE);
+        // if(pNv->cursorVisible)
+        //     G80DispShowCursor(pNv, FALSE);
         C(0x00000840 + headOff, pScrn->depth == 8 ? 0x80000000 : 0xc0000000);
         C(0x00000844 + headOff, (pNv->videoRam * 1024 - 0x5000) >> 8);
         if(pNv->architecture != 0x50)
             C(0x0000085C + headOff, 1);
         C(0x00000874 + headOff, 1);
     }
-
-    C(0x00000080, 0);
 }
 
 void
-G80DispDPMSSet(ScrnInfoPtr pScrn, int mode, int flags)
+G80CrtcDPMSSet(xf86CrtcPtr crtc, int mode)
 {
+    ErrorF("CRTC dpms unimplemented\n");
+#if 0
     G80Ptr pNv = G80PTR(pScrn);
     const int off = 0x800 * pNv->or;
     CARD32 tmp;
@@ -502,21 +467,121 @@ G80DispDPMSSet(ScrnInfoPtr pScrn, int mode, int flags)
 
         break;
     }
+#endif
 }
 
 /******************************** Cursor stuff ********************************/
-void G80DispShowCursor(G80Ptr pNv, Bool update)
+void G80CrtcShowCursor(xf86CrtcPtr crtc, Bool update)
 {
-    const int headOff = 0x400 * pNv->head;
+    ScrnInfoPtr pScrn = crtc->scrn;
+    const int headOff = 0x400 * G80CrtcGetHead(crtc);
 
     C(0x00000880 + headOff, 0x85000000);
     if(update) C(0x00000080, 0);
 }
 
-void G80DispHideCursor(G80Ptr pNv, Bool update)
+void G80CrtcHideCursor(xf86CrtcPtr crtc, Bool update)
 {
-    const int headOff = 0x400 * pNv->head;
+    ScrnInfoPtr pScrn = crtc->scrn;
+    const int headOff = 0x400 * G80CrtcGetHead(crtc);
 
     C(0x00000880 + headOff, 0x5000000);
     if(update) C(0x00000080, 0);
+}
+
+void G80CrtcSetCursorPosition(xf86CrtcPtr crtc, int x, int y)
+{
+    G80Ptr pNv = G80PTR(crtc->scrn);
+    const int headOff = 0x647000 + 0x1000*G80CrtcGetHead(crtc);
+
+    x &= 0xffff;
+    y &= 0xffff;
+    pNv->reg[(0x84 + headOff)/4] = y << 16 | x;
+    pNv->reg[(0x80 + headOff)/4] = 0;
+}
+
+/******************************** CRTC stuff ********************************/
+
+static Bool
+G80CrtcLock(xf86CrtcPtr crtc)
+{
+    return FALSE;
+}
+
+static void
+G80CrtcPrepare(xf86CrtcPtr crtc)
+{
+    ScrnInfoPtr pScrn = crtc->scrn;
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    int i;
+
+    ErrorF("Outputs:\n");
+    for(i = 0; i < xf86_config->num_output; i++) {
+        xf86OutputPtr output = xf86_config->output[i];
+
+        if(output->crtc) {
+            G80CrtcPrivPtr pPriv = output->crtc->driver_private;
+            ErrorF("\t%s -> HEAD%i\n", output->name, pPriv->head);
+        } else {
+            ErrorF("\t%s disconnected\n", output->name);
+            output->funcs->mode_set(output, NULL, NULL);
+        }
+    }
+}
+
+static void
+G80CrtcCommit(xf86CrtcPtr crtc)
+{
+    ScrnInfoPtr pScrn = crtc->scrn;
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(crtc->scrn);
+    int i, crtc_mask = 0;
+
+    /* If any heads are unused, blank them */
+    for(i = 0; i < xf86_config->num_output; i++) {
+        xf86OutputPtr output = xf86_config->output[i];
+
+        if(output->crtc)
+            /* XXXagp: This assumes that xf86_config->crtc[i] is HEADi */
+            crtc_mask |= 1 << G80CrtcGetHead(output->crtc);
+    }
+
+    for(i = 0; i < xf86_config->num_crtc; i++)
+        if(!((1 << i) & crtc_mask))
+            G80CrtcBlankScreen(xf86_config->crtc[i], TRUE);
+
+    C(0x00000080, 0);
+}
+
+static const xf86CrtcFuncsRec g80_crtc_funcs = {
+    .dpms = G80CrtcDPMSSet,
+    .save = NULL,
+    .restore = NULL,
+    .lock = G80CrtcLock,
+    .unlock = NULL,
+    .mode_fixup = G80CrtcModeFixup,
+    .prepare = G80CrtcPrepare,
+    .mode_set = G80CrtcModeSet,
+    // .gamma_set = G80DispGammaSet,
+    .commit = G80CrtcCommit,
+    .shadow_create = NULL,
+    .shadow_destroy = NULL,
+    .destroy = NULL,
+};
+
+void
+G80DispCreateCrtcs(ScrnInfoPtr pScrn)
+{
+    Head head;
+    xf86CrtcPtr crtc;
+    G80CrtcPrivPtr g80_crtc;
+
+    /* Create a "crtc" object for each head */
+    for(head = HEAD0; head <= HEAD1; head++) {
+        crtc = xf86CrtcCreate(pScrn, &g80_crtc_funcs);
+        if(!crtc) return;
+
+        g80_crtc = xnfcalloc(sizeof(*g80_crtc), 1);
+        g80_crtc->head = head;
+        crtc->driver_private = g80_crtc;
+    }
 }

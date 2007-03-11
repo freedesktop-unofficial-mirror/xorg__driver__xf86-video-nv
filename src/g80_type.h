@@ -2,6 +2,9 @@
 #include <xf86.h>
 #include <xf86int10.h>
 #include <xf86Cursor.h>
+#include <xf86DDC.h>
+#include <xf86Crtc.h>
+#include <xf86int10.h>
 
 typedef enum Head {
     HEAD0 = 0,
@@ -36,12 +39,6 @@ typedef struct G80Rec {
         ORNum sor;
     } i2cMap[4];
 
-    float               pclk; /* Current mode pclk in kHz */
-
-    Head                head;
-    ORType              orType;
-    ORNum               or;
-
     xf86Int10InfoPtr    int10;
     int                 int10Mode; /* Console mode to restore */
 
@@ -67,8 +64,9 @@ typedef struct G80Rec {
     CARD32 *            dmaBase;
     void              (*DMAKickoffCallback)(ScrnInfoPtr);
 
-    CloseScreenProcPtr  CloseScreen;
-    ScreenBlockHandlerProcPtr BlockHandler;
+    CreateScreenResourcesProcPtr CreateScreenResources;
+    CloseScreenProcPtr           CloseScreen;
+    ScreenBlockHandlerProcPtr    BlockHandler;
 } G80Rec, *G80Ptr;
 
 #define G80PTR(p) ((G80Ptr)((p)->driverPrivate))

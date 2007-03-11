@@ -70,13 +70,15 @@ if SUPPORT_G80
 g80_sources = \
          g80_cursor.c \
          g80_cursor.h \
-         g80_ddc.c \
-         g80_ddc.h \
+         g80_dac.c \
          g80_display.c \
          g80_display.h \
          g80_dma.c \
          g80_dma.h \
          g80_driver.c \
+         g80_output.c \
+         g80_output.h \
+         g80_sor.c \
          g80_type.h \
          g80_xaa.c \
          g80_xaa.h
