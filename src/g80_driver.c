@@ -95,13 +95,11 @@ static const char *int10Symbols[] = {
 typedef enum {
     OPTION_HW_CURSOR,
     OPTION_NOACCEL,
-    OPTION_BACKEND_MODE,
 } G80Opts;
 
 static const OptionInfoRec G80Options[] = {
     { OPTION_HW_CURSOR,         "HWCursor",     OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_NOACCEL,           "NoAccel",      OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_BACKEND_MODE,      "BackendMode",  OPTV_ANYSTR,    {0}, FALSE },
     { -1,                       NULL,           OPTV_NONE,      {0}, FALSE }
 };
 
@@ -342,31 +340,6 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     xf86PrintModes(pScrn);
     xf86SetDpi(pScrn, 0, 0);
 
-    /* Custom backend timings */
-    pNv->BackendMode = NULL;
-    if((s = xf86GetOptValString(pNv->Options, OPTION_BACKEND_MODE))) {
-        DisplayModePtr mode;
-
-        for(mode = pScrn->modes; ; mode = mode->next) {
-            if(!strcmp(mode->name, s))
-                break;
-            if(mode->next == pScrn->modes) {
-                mode = NULL;
-                break;
-            }
-        }
-
-        pNv->BackendMode = mode;
-
-        if(mode)
-            xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "BackendMode: Using mode "
-                       "\"%s\" for display timings\n", mode->name);
-        else
-            xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "Cannot honor "
-                       "\"BackendMode\" option: no mode named \"%s\" "
-                       "found.\n", s);
-    }
-
     /* Load fb */
     if(!xf86LoadSubModule(pScrn, "fb")) goto fail;
     xf86LoaderReqSymLists(fbSymbols, NULL);
@@ -405,8 +378,10 @@ AcquireDisplay(ScrnInfoPtr pScrn)
 
     if(!G80DispInit(pScrn))
         return FALSE;
+#if 0
     if(!G80CursorAcquire(pNv))
         return FALSE;
+#endif
     if(!G80DispSetMode(pScrn, pScrn->currentMode))
         return FALSE;
     G80DispDPMSSet(pScrn, DPMSModeOn, 0);
@@ -422,7 +397,9 @@ ReleaseDisplay(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
 
+#if 0
     G80CursorRelease(pNv);
+#endif
     G80DispShutdown(pScrn);
 
     if(pNv->int10 && pNv->int10Mode) {
@@ -450,8 +427,10 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
 
     if(pNv->xaa)
         XAADestroyInfoRec(pNv->xaa);
+#if 0
     if(pNv->HWCursor)
         xf86DestroyCursorInfoRec(pNv->CursorInfo);
+#endif
 
     if(xf86ServerIsExiting()) {
         if(pNv->int10) xf86FreeInt10(pNv->int10);
@@ -792,11 +771,13 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     miDCInitialize(pScreen, xf86GetPointerScreenFuncs());
 
     /* Initialize hardware cursor.  Must follow software cursor initialization. */
+#if 0
     if(pNv->HWCursor && !G80CursorInit(pScreen)) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
                    "Hardware cursor initialization failed\n");
         pNv->HWCursor = FALSE;
     }
+#endif
 
     /* Initialize default colormap */
     if(!miCreateDefColormap(pScreen))

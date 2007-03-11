@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#if 0
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -183,3 +184,5 @@ Bool G80CursorInit(ScreenPtr pScreen)
 
     return xf86InitCursor(pScreen, infoPtr);
 }
+
+#endif

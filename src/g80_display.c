@@ -338,9 +338,6 @@ G80DispSetMode(ScrnInfoPtr pScrn, DisplayModePtr mode)
     const int headOff = 0x400 * pNv->head;
     int interlaceDiv, fudge;
 
-    if(pNv->BackendMode)
-        mode = pNv->BackendMode;
-
     pNv->pclk = mode->SynthClock;
 
     /* Magic mode timing fudge factor */

@@ -49,7 +49,6 @@ typedef struct G80Rec {
     OptionInfoPtr       Options;
     Bool                HWCursor;
     Bool                NoAccel;
-    DisplayModePtr      BackendMode;
 
     /* Cursor */
     xf86CursorInfoPtr   CursorInfo;

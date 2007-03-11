@@ -147,13 +147,6 @@ Enable or disable the hardware cursor.  Default: on.
 .TP
 .BI "Option \*qNoAccel\*q \*q" boolean \*q
 Disable or enable acceleration.  Default: acceleration is enabled.
-.TP
-.BI "Option \*qBackendMode\*q \*q" mode \*q
-Designate a mode to be used as the physical mode driving the display.
-The screen will be scaled to fit the requested mode.
-For example, if
-.B Option \*qBackendMode\*q \*q1280x1024\*q
-is specified, the monitor will always display the 1280x1024 mode and the screen will be scaled to match.
 ..
 .if __support_g80__ .G8
 .\" ******************** end G80 section ********************
