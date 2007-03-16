@@ -1190,6 +1190,7 @@ void NVLoadStateExt (
               pNv->PGRAPH[0x008C/4] = 0x60de8051;
               pNv->PGRAPH[0x0090/4] = 0x00008000;
               pNv->PGRAPH[0x0610/4] = 0x00be3c5f;
+              pNv->PGRAPH[0x0bc4/4] |= 0x00008000;
 
               j = pNv->REGS[0x1540/4] & 0xff;
               if(j) {
