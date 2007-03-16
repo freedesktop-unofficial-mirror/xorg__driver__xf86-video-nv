@@ -1736,6 +1736,8 @@ NVModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     NVPtr pNv = NVPTR(pScrn);
     NVRegPtr nvReg;
 
+    NVSync(pScrn);
+
     /* Initialise the ModeReg values */
     if (!vgaHWInit(pScrn, mode))
 	return FALSE;
