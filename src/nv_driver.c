@@ -816,7 +816,10 @@ NVProbe(DriverPtr drv, int flags)
 Bool
 NVSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
 {
-    return NVModeInit(xf86Screens[scrnIndex], mode);
+    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+
+    NVSync(pScrn);
+    return NVModeInit(pScrn, mode);
 }
 
 /*
@@ -1735,8 +1738,6 @@ NVModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     vgaRegPtr vgaReg;
     NVPtr pNv = NVPTR(pScrn);
     NVRegPtr nvReg;
-
-    NVSync(pScrn);
 
     /* Initialise the ModeReg values */
     if (!vgaHWInit(pScrn, mode))
