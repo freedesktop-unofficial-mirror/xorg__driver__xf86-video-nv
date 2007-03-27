@@ -31,6 +31,7 @@
 
 #include "g80_type.h"
 #include "g80_ddc.h"
+#include "g80_display.h"
 
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
 {
@@ -58,7 +59,7 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
     entries = table2[2];
 
     for(i = 0; i < entries; i++) {
-        CARD32 type, port;
+        int type, port;
         ORNum or;
 
         b = *(CARD32*)&table2[headerSize + 8*i];
