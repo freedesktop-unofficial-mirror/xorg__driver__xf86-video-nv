@@ -30,6 +30,7 @@
 
 #include <xf86_OSproc.h>
 #include <xf86Resources.h>
+#include <xf86RandR12.h>
 #include <mipointer.h>
 #include <mibstore.h>
 #include <micmap.h>
@@ -44,6 +45,7 @@
 #include "g80_display.h"
 #include "g80_ddc.h"
 #include "g80_dma.h"
+#include "g80_output.h"
 #include "g80_xaa.h"
 
 #define G80_REG_SIZE (1024 * 1024 * 16)
@@ -119,6 +121,7 @@ G80FreeRec(ScrnInfoPtr pScrn)
     pScrn->driverPrivate = NULL;
 }
 
+static Bool
 G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
 {
     G80Ptr pNv = G80PTR(pScrn);
@@ -161,7 +164,6 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     PCITAG pcitag;
     MessageType from;
     Bool primary;
-    char *s;
     const rgb zeros = {0, 0, 0};
     const Gamma gzeros = {0.0, 0.0, 0.0};
     CARD32 tmp;
@@ -395,7 +397,7 @@ fail:
 static Bool
 AcquireDisplay(ScrnInfoPtr pScrn)
 {
-    G80Ptr pNv = G80PTR(pScrn);
+//    G80Ptr pNv = G80PTR(pScrn);
 
     if(!G80DispInit(pScrn))
         return FALSE;

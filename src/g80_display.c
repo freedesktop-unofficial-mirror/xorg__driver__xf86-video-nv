@@ -322,7 +322,6 @@ G80CrtcModeSet(xf86CrtcPtr crtc, DisplayModePtr mode,
                DisplayModePtr adjusted_mode, int x, int y)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
-    G80Ptr pNv = G80PTR(pScrn);
     G80CrtcPrivPtr pPriv = crtc->driver_private;
     const int HDisplay = mode->HDisplay, VDisplay = mode->VDisplay;
     const int headOff = 0x400 * G80CrtcGetHead(crtc);

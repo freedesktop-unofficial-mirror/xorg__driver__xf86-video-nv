@@ -236,7 +236,7 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
     xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
-    int i, count = 0;
+    int i;
 
     if(!G80ReadPortMapping(pScrn->scrnIndex, pNv))
         return FALSE;
@@ -252,7 +252,6 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
     /* For each output, set the crtc and clone masks */
     for(i = 0; i < xf86_config->num_output; i++) {
         xf86OutputPtr output = xf86_config->output[i];
-        G80OutputPrivPtr pPriv = output->driver_private;
 
         /* Any output can connect to any head */
         output->possible_crtcs = 0x3;
