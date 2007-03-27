@@ -114,7 +114,7 @@ static const xf86OutputFuncsRec G80SorOutputFuncs = {
 };
 
 xf86OutputPtr
-G80CreateSor(ScrnInfoPtr pScrn, ORNum or, int i2cPort)
+G80CreateSor(ScrnInfoPtr pScrn, ORNum or)
 {
     G80OutputPrivPtr pPriv = xnfcalloc(sizeof(*pPriv), 1);
     xf86OutputPtr output;
@@ -132,9 +132,6 @@ G80CreateSor(ScrnInfoPtr pScrn, ORNum or, int i2cPort)
     output->driver_private = pPriv;
     output->interlaceAllowed = TRUE;
     output->doubleScanAllowed = TRUE;
-
-    /* Create an I2C object */
-    G80I2CInit(output, i2cPort);
 
     return output;
 }

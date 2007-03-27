@@ -127,18 +127,17 @@ static void G80_I2CGetBits(I2CBusPtr b, int *clock, int *data)
     *data = !!(val & 2);
 }
 
-Bool
-G80I2CInit(xf86OutputPtr output, const int port)
+static I2CBusPtr
+G80I2CInit(ScrnInfoPtr pScrn, const char *name, const int port)
 {
-    G80OutputPrivPtr pPriv = output->driver_private;
     I2CBusPtr i2c;
 
     /* Allocate the I2C bus structure */
     i2c = xf86CreateI2CBusRec();
-    if(!i2c) return FALSE;
+    if(!i2c) return NULL;
 
-    i2c->BusName = output->name;
-    i2c->scrnIndex = output->scrn->scrnIndex;
+    i2c->BusName = strdup(name);
+    i2c->scrnIndex = pScrn->scrnIndex;
     i2c->I2CPutBits = G80_I2CPutBits;
     i2c->I2CGetBits = G80_I2CGetBits;
     i2c->ByteTimeout = 2200; /* VESA DDC spec 3 p. 43 (+10 %) */
@@ -149,11 +148,10 @@ G80I2CInit(xf86OutputPtr output, const int port)
     i2c->DriverPrivate.val = port;
 
     if(xf86I2CBusInit(i2c)) {
-        pPriv->i2c = i2c;
-        return TRUE;
+        return i2c;
     } else {
         xfree(i2c);
-        return FALSE;
+        return NULL;
     }
 }
 
@@ -227,7 +225,10 @@ G80OutputDestroy(xf86OutputPtr output)
 {
     G80OutputPrivPtr pPriv = output->driver_private;
 
-    xf86DestroyI2CBusRec(pPriv->i2c, TRUE, TRUE);
+    if(pPriv->partner)
+        ((G80OutputPrivPtr)pPriv->partner->driver_private)->partner = NULL;
+    else
+        xf86DestroyI2CBusRec(pPriv->i2c, TRUE, TRUE);
     pPriv->i2c = NULL;
 }
 
@@ -243,10 +244,40 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
 
     /* For each DDC port, create an output for the attached ORs */
     for(i = 0; i < 4; i++) {
+        xf86OutputPtr dac = NULL, sor = NULL;
+        I2CBusPtr i2c;
+        char i2cName[16];
+
+        if(pNv->i2cMap[i].dac == -1 && pNv->i2cMap[i].sor == -1)
+            /* No outputs on this port */
+            continue;
+
+        snprintf(i2cName, sizeof(i2cName), "I2C%i", i);
+        i2c = G80I2CInit(pScrn, i2cName, i);
+        if(!i2c) {
+            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                       "Failed to initialize I2C for port %i.\n",
+                       i);
+            continue;
+        }
+
         if(pNv->i2cMap[i].dac != -1)
-            G80CreateDac(pScrn, pNv->i2cMap[i].dac, i);
+            dac = G80CreateDac(pScrn, pNv->i2cMap[i].dac);
         if(pNv->i2cMap[i].sor != -1)
-            G80CreateSor(pScrn, pNv->i2cMap[i].sor, i);
+            sor = G80CreateSor(pScrn, pNv->i2cMap[i].sor);
+
+        if(dac) {
+            G80OutputPrivPtr pPriv = dac->driver_private;
+
+            pPriv->partner = sor;
+            pPriv->i2c = i2c;
+        }
+        if(sor) {
+            G80OutputPrivPtr pPriv = sor->driver_private;
+
+            pPriv->partner = dac;
+            pPriv->i2c = i2c;
+        }
     }
 
     /* For each output, set the crtc and clone masks */
@@ -260,4 +291,3 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
 
     return TRUE;
 }
-
