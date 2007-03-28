@@ -64,7 +64,6 @@ typedef struct G80Rec {
     CARD32 *            dmaBase;
     void              (*DMAKickoffCallback)(ScrnInfoPtr);
 
-    CreateScreenResourcesProcPtr CreateScreenResources;
     CloseScreenProcPtr           CloseScreen;
     ScreenBlockHandlerProcPtr    BlockHandler;
 } G80Rec, *G80Ptr;

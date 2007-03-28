@@ -408,8 +408,7 @@ AcquireDisplay(ScrnInfoPtr pScrn)
         return FALSE;
     G80DispDPMSSet(pScrn, DPMSModeOn, 0);
 #endif
-    ErrorF("TODO: Set the current config, rather than using xf86SetSingleMode\n");
-    xf86SetSingleMode(pScrn, pScrn->currentMode, RR_Rotate_0);
+    xf86SetDesiredModes(pScrn);
 
     return TRUE;
 }
@@ -468,7 +467,6 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
     pScrn->vtSema = FALSE;
     pScreen->CloseScreen = pNv->CloseScreen;
     pScreen->BlockHandler = pNv->BlockHandler;
-    pScreen->CreateScreenResources = pNv->CreateScreenResources;
     return (*pScreen->CloseScreen)(scrnIndex, pScreen);
 }
 
@@ -500,21 +498,6 @@ G80SaveScreen(ScreenPtr pScreen, int mode)
 
     return FALSE;
 }
-
-static Bool
-G80CreateScreenResources(ScreenPtr pScreen)
-{
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-    G80Ptr pNv = G80PTR(pScrn);
-
-    pScreen->CreateScreenResources = pNv->CreateScreenResources;
-    if(!(*pScreen->CreateScreenResources)(pScreen))
-        return FALSE;
-
-    if(!xf86RandR12CreateScreenResources(pScreen))
-        return FALSE;
-    return TRUE;
- }
 
 static void
 G80InitHW(ScrnInfoPtr pScrn)
@@ -850,19 +833,14 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     pScreen->SaveScreen = G80SaveScreen;
 
-    pNv->CreateScreenResources =  pScreen->CreateScreenResources;
-    pScreen->CreateScreenResources = G80CreateScreenResources;
-
     pNv->CloseScreen = pScreen->CloseScreen;
     pScreen->CloseScreen = G80CloseScreen;
 
     pNv->BlockHandler = pScreen->BlockHandler;
     pScreen->BlockHandler = G80BlockHandler;
 
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "RandR 1.2 enabled. Please ignore the following RandR disabled message.\n");
-    xf86DisableRandR();
-    xf86RandR12Init(pScreen);
-    xf86RandR12SetRotations(pScreen, RR_Rotate_0);
+    if(!xf86CrtcScreenInit(pScreen))
+        return FALSE;
 
     return TRUE;
 }
