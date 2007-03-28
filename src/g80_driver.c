@@ -482,6 +482,8 @@ G80BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
     if(pNv->DMAKickoffCallback)
         (*pNv->DMAKickoffCallback)(pScrnInfo);
 
+    G80OutputResetCachedStatus(pScrnInfo);
+
     pScreen->BlockHandler = pNv->BlockHandler;
     (*pScreen->BlockHandler) (i, blockData, pTimeout, pReadmask);
     pScreen->BlockHandler = G80BlockHandler;

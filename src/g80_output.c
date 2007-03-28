@@ -188,25 +188,20 @@ G80OutputCommit(xf86OutputPtr output)
 {
 }
 
-DisplayModePtr
-G80OutputGetDDCModes(xf86OutputPtr output)
+static xf86MonPtr
+ProbeDDC(I2CBusPtr i2c)
 {
-    ScrnInfoPtr pScrn = output->scrn;
+    ScrnInfoPtr pScrn = xf86Screens[i2c->scrnIndex];
     G80Ptr pNv = G80PTR(pScrn);
-    G80OutputPrivPtr pPriv = output->driver_private;
-    I2CBusPtr i2c = pPriv->i2c;
     xf86MonPtr monInfo = NULL;
-    DisplayModePtr modes;
     const int bus = i2c->DriverPrivate.val, off = bus * 0x18;
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
             "Probing for EDID on I2C bus %i...\n", bus);
     pNv->reg[(0x0000E138+off)/4] = 7;
-    monInfo = xf86OutputGetEDID(output, i2c);
+    /* Should probably use xf86OutputGetEDID here */
+    monInfo = xf86DoEDID_DDC2(pScrn->scrnIndex, i2c);
     pNv->reg[(0x0000E138+off)/4] = 3;
-
-    xf86OutputSetEDID(output, monInfo);
-    modes = xf86OutputGetEDIDModes(output);
 
     if(monInfo) {
         xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
@@ -217,7 +212,67 @@ G80OutputGetDDCModes(xf86OutputPtr output)
         xf86DrvMsg(pScrn->scrnIndex, X_INFO, "  ... none found\n");
     }
 
-    return modes;
+    return monInfo;
+}
+
+/*
+ * Read an EDID from the i2c port.  Perform load detection on the DAC (if
+ * present) to see if the display is connected via VGA.  Sets the cached status
+ * of both outputs.  The status is marked dirty again in the BlockHandler.
+ */
+void G80OutputPartnersDetect(xf86OutputPtr dac, xf86OutputPtr sor, I2CBusPtr i2c)
+{
+    xf86MonPtr monInfo = ProbeDDC(i2c);
+    xf86OutputPtr connected = NULL;
+    Bool load = dac && G80DacLoadDetect(dac);
+
+    if(dac) {
+        G80OutputPrivPtr pPriv = dac->driver_private;
+
+        if(load) {
+            pPriv->cached_status = XF86OutputStatusConnected;
+            connected = dac;
+        } else {
+            pPriv->cached_status = XF86OutputStatusDisconnected;
+        }
+    }
+
+    if(sor) {
+        G80OutputPrivPtr pPriv = sor->driver_private;
+
+        if(monInfo && !load) {
+            pPriv->cached_status = XF86OutputStatusConnected;
+            connected = sor;
+        } else {
+            pPriv->cached_status = XF86OutputStatusDisconnected;
+        }
+    }
+
+    if(connected)
+        xf86OutputSetEDID(connected, monInfo);
+}
+
+/*
+ * Reset the cached output status for all outputs.  Called from G80BlockHandler.
+ */
+void
+G80OutputResetCachedStatus(ScrnInfoPtr pScrn)
+{
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    int i;
+
+    for(i = 0; i < xf86_config->num_output; i++) {
+        G80OutputPrivPtr pPriv = xf86_config->output[i]->driver_private;
+        pPriv->cached_status = XF86OutputStatusUnknown;
+    }
+}
+
+DisplayModePtr
+G80OutputGetDDCModes(xf86OutputPtr output)
+{
+    /* The EDID is read as part of the detect step */
+    output->funcs->detect(output);
+    return xf86OutputGetEDIDModes(output);
 }
 
 void

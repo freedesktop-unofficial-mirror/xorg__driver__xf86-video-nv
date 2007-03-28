@@ -76,6 +76,19 @@ G80DacModeSet(xf86OutputPtr output, DisplayModePtr mode,
 static xf86OutputStatus
 G80DacDetect(xf86OutputPtr output)
 {
+    G80OutputPrivPtr pPriv = output->driver_private;
+
+    /* Assume physical status isn't going to change before the BlockHandler */
+    if(pPriv->cached_status != XF86OutputStatusUnknown)
+        return pPriv->cached_status;
+
+    G80OutputPartnersDetect(output, pPriv->partner, pPriv->i2c);
+    return pPriv->cached_status;
+}
+
+Bool
+G80DacLoadDetect(xf86OutputPtr output)
+{
     ScrnInfoPtr pScrn = output->scrn;
     G80Ptr pNv = G80PTR(pScrn);
     G80OutputPrivPtr pPriv = output->driver_private;
@@ -99,11 +112,11 @@ G80DacDetect(xf86OutputPtr output)
     // Use this DAC if all three channels show load.
     if((load & 0x38000000) == 0x38000000) {
         xf86ErrorF("found one!\n");
-        return XF86OutputStatusConnected;
+        return TRUE;
     }
 
     xf86ErrorF("nothing.\n");
-    return XF86OutputStatusDisconnected;
+    return FALSE;
 }
 
 static void
@@ -144,6 +157,7 @@ G80CreateDac(ScrnInfoPtr pScrn, ORNum or)
 
     pPriv->type = DAC;
     pPriv->or = or;
+    pPriv->cached_status = XF86OutputStatusUnknown;
     pPriv->set_pclk = G80DacSetPClk;
     output->driver_private = pPriv;
     output->interlaceAllowed = TRUE;

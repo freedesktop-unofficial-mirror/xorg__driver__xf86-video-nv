@@ -25,8 +25,6 @@
 #include "config.h"
 #endif
 
-#include <X11/Xatom.h>
-
 #include "g80_type.h"
 #include "g80_display.h"
 #include "g80_output.h"
@@ -74,20 +72,15 @@ G80SorModeSet(xf86OutputPtr output, DisplayModePtr mode,
 static xf86OutputStatus
 G80SorDetect(xf86OutputPtr output)
 {
-    return XF86OutputStatusUnknown;
 
-#if 0
-    DisplayModePtr modes = output->funcs->get_modes(output);
-    xf86OutputStatus status;
+    G80OutputPrivPtr pPriv = output->driver_private;
 
-    if(modes)
-        status = XF86OutputStatusConnected;
-    else
-        status = XF86OutputStatusDisconnected;
-    xfree(modes);
+    /* Assume physical status isn't going to change before the BlockHandler */
+    if(pPriv->cached_status != XF86OutputStatusUnknown)
+        return pPriv->cached_status;
 
-    return status;
-#endif
+    G80OutputPartnersDetect(pPriv->partner, output, pPriv->i2c);
+    return pPriv->cached_status;
 }
 
 static void
@@ -128,6 +121,7 @@ G80CreateSor(ScrnInfoPtr pScrn, ORNum or)
 
     pPriv->type = SOR;
     pPriv->or = or;
+    pPriv->cached_status = XF86OutputStatusUnknown;
     pPriv->set_pclk = G80SorSetPClk;
     output->driver_private = pPriv;
     output->interlaceAllowed = TRUE;
