@@ -1599,7 +1599,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     if (pNv->FlatPanel && !pNv->Television && pNv->fpWidth && pNv->fpHeight) {
 	DisplayModePtr Mode;
 
-	Mode = xnfcalloc(1, sizeof(DisplayModeRec));
 	Mode = xf86CVTMode(pNv->fpWidth, pNv->fpHeight, 60.00, TRUE, FALSE);
 	Mode->type = M_T_DRIVER;
 	pScrn->monitor->Modes = NVModesAdd(pScrn->monitor->Modes, Mode);
