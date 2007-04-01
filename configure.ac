@@ -59,6 +59,9 @@ PKG_CHECK_EXISTS([xorg-server >= 1.0.99.901],
                  [AC_DEFINE(HAVE_XV_DRAWABLE,1,[XV hooks take a DrawablePtr])],
                  [AC_DEFINE(USE_LIBC_WRAPPER,1,[Use the libc wrapper])])
 
+PKG_CHECK_EXISTS([xorg-server >= 1.1.99.901],
+                 [AC_DEFINE(USE_CVTMODE_FUNC,1,[Use xf86CVTMode func])])
+
 # Checks for pkg-config packages
 PKG_CHECK_MODULES(XORG, [xorg-server xproto fontsproto $REQUIRED_MODULES])
 sdkdir=$(pkg-config --variable=sdkdir xorg-server)
