@@ -64,9 +64,9 @@ G80SorModeSet(xf86OutputPtr output, DisplayModePtr mode,
 
     C(0x00000600 + sorOff,
         (G80CrtcGetHead(output->crtc) == HEAD0 ? 1 : 2) |
-        (mode->SynthClock > 165000 ? 0x500 : 0x100) |
-        ((mode->Flags & V_NHSYNC) ? 0x1000 : 0) |
-        ((mode->Flags & V_NVSYNC) ? 0x2000 : 0));
+        (adjusted_mode->Clock > 165000 ? 0x500 : 0x100) |
+        ((adjusted_mode->Flags & V_NHSYNC) ? 0x1000 : 0) |
+        ((adjusted_mode->Flags & V_NVSYNC) ? 0x2000 : 0));
 }
 
 static xf86OutputStatus
