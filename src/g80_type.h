@@ -47,11 +47,6 @@ typedef struct G80Rec {
     Bool                HWCursor;
     Bool                NoAccel;
 
-    /* Cursor */
-    xf86CursorInfoPtr   CursorInfo;
-    Bool                cursorVisible;
-    CARD32              tmpCursor[256]; /* Temporary 1bpp cursor image */
-
     /* XAA */
     XAAInfoRecPtr       xaa;
     CARD32              currentRop;

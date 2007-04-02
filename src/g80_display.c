@@ -32,6 +32,7 @@
 #include <unistd.h>
 
 #include "g80_type.h"
+#include "g80_cursor.h"
 #include "g80_display.h"
 #include "g80_output.h"
 
@@ -41,7 +42,10 @@
 typedef struct G80CrtcPrivRec {
     Head head;
     int pclk; /* Target pixel clock in kHz */
+    Bool cursorVisible;
 } G80CrtcPrivRec, *G80CrtcPrivPtr;
+
+static void G80CrtcShowHideCursor(xf86CrtcPtr crtc, Bool show, Bool update);
 
 /*
  * PLL calculation.  pclk is in kHz.
@@ -383,10 +387,11 @@ G80CrtcBlankScreen(xf86CrtcPtr crtc, Bool blank)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
     G80Ptr pNv = G80PTR(pScrn);
-    const int headOff = 0x400 * G80CrtcGetHead(crtc);
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
+    const int headOff = 0x400 * pPriv->head;
 
     if(blank) {
-        // G80DispHideCursor(pNv, FALSE);
+        G80CrtcShowHideCursor(crtc, FALSE, FALSE);
 
         C(0x00000840 + headOff, 0);
         C(0x00000844 + headOff, 0);
@@ -405,8 +410,8 @@ G80CrtcBlankScreen(xf86CrtcPtr crtc, Bool blank)
         C(0x00000884 + headOff, (pNv->videoRam << 2) - 0x40);
         if(pNv->architecture != 0x50)
             C(0x0000089C + headOff, 1);
-        // if(pNv->cursorVisible)
-        //     G80DispShowCursor(pNv, FALSE);
+        if(pPriv->cursorVisible)
+            G80CrtcShowHideCursor(crtc, TRUE, FALSE);
         C(0x00000840 + headOff, pScrn->depth == 8 ? 0x80000000 : 0xc0000000);
         C(0x00000844 + headOff, (pNv->videoRam * 1024 - 0x5000) >> 8);
         if(pNv->architecture != 0x50)
@@ -470,33 +475,27 @@ G80CrtcDPMSSet(xf86CrtcPtr crtc, int mode)
 }
 
 /******************************** Cursor stuff ********************************/
-void G80CrtcShowCursor(xf86CrtcPtr crtc, Bool update)
+static void G80CrtcShowHideCursor(xf86CrtcPtr crtc, Bool show, Bool update)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
     const int headOff = 0x400 * G80CrtcGetHead(crtc);
 
-    C(0x00000880 + headOff, 0x85000000);
-    if(update) C(0x00000080, 0);
+    C(0x00000880 + headOff, show ? 0x85000000 : 0x5000000);
+    if(update) {
+        pPriv->cursorVisible = show;
+        C(0x00000080, 0);
+    }
 }
 
-void G80CrtcHideCursor(xf86CrtcPtr crtc, Bool update)
+void G80CrtcShowCursor(xf86CrtcPtr crtc)
 {
-    ScrnInfoPtr pScrn = crtc->scrn;
-    const int headOff = 0x400 * G80CrtcGetHead(crtc);
-
-    C(0x00000880 + headOff, 0x5000000);
-    if(update) C(0x00000080, 0);
+    G80CrtcShowHideCursor(crtc, TRUE, TRUE);
 }
 
-void G80CrtcSetCursorPosition(xf86CrtcPtr crtc, int x, int y)
+void G80CrtcHideCursor(xf86CrtcPtr crtc)
 {
-    G80Ptr pNv = G80PTR(crtc->scrn);
-    const int headOff = 0x647000 + 0x1000*G80CrtcGetHead(crtc);
-
-    x &= 0xffff;
-    y &= 0xffff;
-    pNv->reg[(0x84 + headOff)/4] = y << 16 | x;
-    pNv->reg[(0x80 + headOff)/4] = 0;
+    G80CrtcShowHideCursor(crtc, FALSE, TRUE);
 }
 
 /******************************** CRTC stuff ********************************/
@@ -564,6 +563,10 @@ static const xf86CrtcFuncsRec g80_crtc_funcs = {
     .commit = G80CrtcCommit,
     .shadow_create = NULL,
     .shadow_destroy = NULL,
+    .set_cursor_position = G80SetCursorPosition,
+    .show_cursor = G80CrtcShowCursor,
+    .hide_cursor = G80CrtcHideCursor,
+    .load_cursor_argb = G80LoadCursorARGB,
     .destroy = NULL,
 };
 
