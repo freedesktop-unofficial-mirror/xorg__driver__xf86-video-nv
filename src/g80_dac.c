@@ -27,6 +27,9 @@
 
 #include <unistd.h>
 
+#define DPMS_SERVER
+#include <X11/extensions/dpms.h>
+
 #include "g80_type.h"
 #include "g80_display.h"
 #include "g80_output.h"
@@ -44,7 +47,33 @@ G80DacSetPClk(xf86OutputPtr output, int pclk)
 static void
 G80DacDPMSSet(xf86OutputPtr output, int mode)
 {
-    ErrorF("DAC dpms unimplemented\n");
+    G80Ptr pNv = G80PTR(output->scrn);
+    G80OutputPrivPtr pPriv = output->driver_private;
+    const int off = 0x800 * pPriv->or;
+    CARD32 tmp;
+
+    /*
+     * DPMSModeOn       everything on
+     * DPMSModeStandby  hsync disabled, vsync enabled
+     * DPMSModeSuspend  hsync enabled, vsync disabled
+     * DPMSModeOff      sync disabled
+     */
+    while(pNv->reg[(0x0061A004+off)/4] & 0x80000000);
+
+    tmp = pNv->reg[(0x0061A004+off)/4];
+    tmp &= ~0x7f;
+    tmp |= 0x80000000;
+
+    if(mode == DPMSModeStandby || mode == DPMSModeOff)
+        tmp |= 1;
+    if(mode == DPMSModeSuspend || mode == DPMSModeOff)
+        tmp |= 4;
+    if(mode != DPMSModeOn)
+        tmp |= 0x10;
+    if(mode == DPMSModeOff)
+        tmp |= 0x40;
+
+    pNv->reg[(0x0061A004+off)/4] = tmp;
 }
 
 static void
@@ -62,6 +91,11 @@ G80DacModeSet(xf86OutputPtr output, DisplayModePtr mode,
         C(0x00000400 + dacOff, 0);
         return;
     }
+
+    // This wouldn't be necessary, but the server is stupid and calls
+    // G80DacDPMSSet after the output is disconnected, even though the hardware
+    // turns it off automatically.
+    G80DacDPMSSet(output, DPMSModeOn);
 
     C(0x00000400 + dacOff,
         (G80CrtcGetHead(output->crtc) == HEAD0 ? 1 : 2) | 0x40);
@@ -94,12 +128,13 @@ G80DacLoadDetect(xf86OutputPtr output)
     G80OutputPrivPtr pPriv = output->driver_private;
     const int scrnIndex = pScrn->scrnIndex;
     const int dacOff = 2048 * pPriv->or;
-    CARD32 load, tmp;
+    CARD32 load, tmp, tmp2;
 
     xf86DrvMsg(scrnIndex, X_PROBED, "Trying load detection on VGA%i ... ",
             pPriv->or);
 
     pNv->reg[(0x0061A010+dacOff)/4] = 0x00000001;
+    tmp2 = pNv->reg[(0x0061A004+dacOff)/4];
     pNv->reg[(0x0061A004+dacOff)/4] = 0x80150000;
     while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
     tmp = pNv->architecture == 0x50 ? 420 : 340;
@@ -107,7 +142,7 @@ G80DacLoadDetect(xf86OutputPtr output)
     usleep(4500);
     load = pNv->reg[(0x0061A00C+dacOff)/4];
     pNv->reg[(0x0061A00C+dacOff)/4] = 0;
-    pNv->reg[(0x0061A004+dacOff)/4] = 0x80550000;
+    pNv->reg[(0x0061A004+dacOff)/4] = 0x80000000 | tmp2;
 
     // Use this DAC if all three channels show load.
     if((load & 0x38000000) == 0x38000000) {

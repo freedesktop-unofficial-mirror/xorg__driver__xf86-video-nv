@@ -36,9 +36,6 @@
 #include "g80_display.h"
 #include "g80_output.h"
 
-#define DPMS_SERVER
-#include <X11/extensions/dpms.h>
-
 typedef struct G80CrtcPrivRec {
     Head head;
     int pclk; /* Target pixel clock in kHz */
@@ -423,55 +420,6 @@ G80CrtcBlankScreen(xf86CrtcPtr crtc, Bool blank)
 void
 G80CrtcDPMSSet(xf86CrtcPtr crtc, int mode)
 {
-    ErrorF("CRTC dpms unimplemented\n");
-#if 0
-    G80Ptr pNv = G80PTR(pScrn);
-    const int off = 0x800 * pNv->or;
-    CARD32 tmp;
-
-    /*
-     * DPMSModeOn       everything on
-     * DPMSModeStandby  hsync disabled, vsync enabled
-     * DPMSModeSuspend  hsync enabled, vsync disabled
-     * DPMSModeOff      sync disabled
-     */
-    switch(pNv->orType) {
-    case DAC:
-        while(pNv->reg[(0x0061A004+off)/4] & 0x80000000);
-
-        tmp = pNv->reg[(0x0061A004+off)/4];
-        tmp &= ~0x7f;
-        tmp |= 0x80000000;
-
-        if(mode == DPMSModeStandby || mode == DPMSModeOff)
-            tmp |= 1;
-        if(mode == DPMSModeSuspend || mode == DPMSModeOff)
-            tmp |= 4;
-        if(mode != DPMSModeOn)
-            tmp |= 0x10;
-        if(mode == DPMSModeOff)
-            tmp |= 0x40;
-
-        pNv->reg[(0x0061A004+off)/4] = tmp;
-
-        break;
-
-    case SOR:
-        while(pNv->reg[(0x0061C004+off)/4] & 0x80000000);
-
-        tmp = pNv->reg[(0x0061C004+off)/4];
-        tmp |= 0x80000000;
-
-        if(mode == DPMSModeOn)
-            tmp |= 1;
-        else
-            tmp &= ~1;
-
-        pNv->reg[(0x0061C004+off)/4] = tmp;
-
-        break;
-    }
-#endif
 }
 
 /******************************** Cursor stuff ********************************/

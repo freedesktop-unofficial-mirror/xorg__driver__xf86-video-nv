@@ -25,6 +25,9 @@
 #include "config.h"
 #endif
 
+#define DPMS_SERVER
+#include <X11/extensions/dpms.h>
+
 #include "g80_type.h"
 #include "g80_display.h"
 #include "g80_output.h"
@@ -42,7 +45,22 @@ G80SorSetPClk(xf86OutputPtr output, int pclk)
 static void
 G80SorDPMSSet(xf86OutputPtr output, int mode)
 {
-    ErrorF("SOR dpms unimplemented\n");
+    G80Ptr pNv = G80PTR(output->scrn);
+    G80OutputPrivPtr pPriv = output->driver_private;
+    const int off = 0x800 * pPriv->or;
+    CARD32 tmp;
+
+    while(pNv->reg[(0x0061C004+off)/4] & 0x80000000);
+
+    tmp = pNv->reg[(0x0061C004+off)/4];
+    tmp |= 0x80000000;
+
+    if(mode == DPMSModeOn)
+        tmp |= 1;
+    else
+        tmp &= ~1;
+
+    pNv->reg[(0x0061C004+off)/4] = tmp;
 }
 
 static void
@@ -61,6 +79,11 @@ G80SorModeSet(xf86OutputPtr output, DisplayModePtr mode,
         C(0x00000600 + sorOff, 0);
         return;
     }
+
+    // This wouldn't be necessary, but the server is stupid and calls
+    // G80SorDPMSSet after the output is disconnected, even though the hardware
+    // turns it off automatically.
+    G80SorDPMSSet(output, DPMSModeOn);
 
     C(0x00000600 + sorOff,
         (G80CrtcGetHead(output->crtc) == HEAD0 ? 1 : 2) |
