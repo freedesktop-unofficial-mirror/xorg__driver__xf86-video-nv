@@ -71,9 +71,6 @@ G80SorModeSet(xf86OutputPtr output, DisplayModePtr mode,
     G80OutputPrivPtr pPriv = output->driver_private;
     const int sorOff = 0x40 * pPriv->or;
 
-    if(adjusted_mode)
-        ErrorF("SOR%i mode %s -> HEAD%i\n", pPriv->or, adjusted_mode->name, G80CrtcGetHead(output->crtc));
-
     if(!adjusted_mode) {
         /* Disconnect the SOR */
         C(0x00000600 + sorOff, 0);

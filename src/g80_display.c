@@ -461,17 +461,11 @@ G80CrtcPrepare(xf86CrtcPtr crtc)
     xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
     int i;
 
-    ErrorF("Outputs:\n");
     for(i = 0; i < xf86_config->num_output; i++) {
         xf86OutputPtr output = xf86_config->output[i];
 
-        if(output->crtc) {
-            G80CrtcPrivPtr pPriv = output->crtc->driver_private;
-            ErrorF("\t%s -> HEAD%i\n", output->name, pPriv->head);
-        } else {
-            ErrorF("\t%s disconnected\n", output->name);
+        if(!output->crtc)
             output->funcs->mode_set(output, NULL, NULL);
-        }
     }
 }
 

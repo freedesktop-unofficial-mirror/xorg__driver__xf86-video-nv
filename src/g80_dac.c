@@ -84,9 +84,6 @@ G80DacModeSet(xf86OutputPtr output, DisplayModePtr mode,
     G80OutputPrivPtr pPriv = output->driver_private;
     const int dacOff = 0x80 * pPriv->or;
 
-    if(adjusted_mode)
-        ErrorF("DAC%i mode %s -> HEAD%i\n", pPriv->or, adjusted_mode->name, G80CrtcGetHead(output->crtc));
-
     if(!adjusted_mode) {
         C(0x00000400 + dacOff, 0);
         return;

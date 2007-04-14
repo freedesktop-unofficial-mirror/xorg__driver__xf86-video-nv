@@ -131,7 +131,6 @@ G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
 
     pitch = (pitch + 255) & ~255;
 
-    ErrorF("Resizing screen to %ix%i\n", width, height);
     pScrn->virtualX = width;
     pScrn->virtualY = height;
 
@@ -481,12 +480,6 @@ G80BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
 static Bool
 G80SaveScreen(ScreenPtr pScreen, int mode)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-
-    if(!pScrn->vtSema) return FALSE;
-
-    ErrorF("SaveScreen unimplemented\n");
-
     return FALSE;
 }
 
