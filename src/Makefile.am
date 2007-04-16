@@ -75,6 +75,8 @@ g80_sources = \
          g80_dma.c \
          g80_dma.h \
          g80_driver.c \
+         g80_exa.c \
+         g80_exa.h \
          g80_output.c \
          g80_output.h \
          g80_sor.c \

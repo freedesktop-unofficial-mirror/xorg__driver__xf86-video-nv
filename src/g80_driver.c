@@ -45,6 +45,7 @@
 #include "g80_display.h"
 #include "g80_dma.h"
 #include "g80_output.h"
+#include "g80_exa.h"
 #include "g80_xaa.h"
 
 #define G80_REG_SIZE (1024 * 1024 * 16)
@@ -63,6 +64,13 @@ static const char *xaaSymbols[] = {
     "XAAFallbackOps",
     "XAAInit",
     "XAAPatternROP",
+    NULL
+};
+
+static const char *exaSymbols[] = {
+    "exaDriverAlloc",
+    "exaDriverInit",
+    "exaDriverFini",
     NULL
 };
 
@@ -96,11 +104,13 @@ static const char *int10Symbols[] = {
 typedef enum {
     OPTION_HW_CURSOR,
     OPTION_NOACCEL,
+    OPTION_ACCEL_METHOD,
 } G80Opts;
 
 static const OptionInfoRec G80Options[] = {
     { OPTION_HW_CURSOR,         "HWCursor",     OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_NOACCEL,           "NoAccel",      OPTV_BOOLEAN,   {0}, FALSE },
+    { OPTION_ACCEL_METHOD,      "AccelMethod",  OPTV_STRING,    {0}, FALSE },
     { -1,                       NULL,           OPTV_NONE,      {0}, FALSE }
 };
 
@@ -164,6 +174,7 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     Bool primary;
     const rgb zeros = {0, 0, 0};
     const Gamma gzeros = {0.0, 0.0, 0.0};
+    char *s;
     CARD32 tmp;
 
     if(flags & PROBE_DETECT) {
@@ -272,6 +283,16 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
         pNv->NoAccel = TRUE;
         xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Acceleration disabled\n");
     }
+    s = xf86GetOptValString(pNv->Options, OPTION_ACCEL_METHOD);
+    if(!s || !strcasecmp(s, "xaa"))
+        pNv->AccelMethod = XAA;
+    else if(!strcasecmp(s, "exa"))
+        pNv->AccelMethod = EXA;
+    else {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "Unrecognized AccelMethod "
+        "\"%s\".\n", s);
+        goto fail;
+    }
 
     /* Set the bits per RGB for 8bpp mode */
     if(pScrn->depth == 8)
@@ -366,8 +387,16 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     xf86LoaderReqSymLists(fbSymbols, NULL);
 
     if(!pNv->NoAccel) {
-        if(!xf86LoadSubModule(pScrn, "xaa")) goto fail;
-        xf86LoaderReqSymLists(xaaSymbols, NULL);
+        switch(pNv->AccelMethod) {
+        case XAA:
+            if(!xf86LoadSubModule(pScrn, "xaa")) goto fail;
+            xf86LoaderReqSymLists(xaaSymbols, NULL);
+            break;
+        case EXA:
+            if(!xf86LoadSubModule(pScrn, "exa")) goto fail;
+            xf86LoaderReqSymLists(exaSymbols, NULL);
+            break;
+        }
     }
 
     /* Load ramdac if needed */
@@ -440,6 +469,8 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
 
     if(pNv->xaa)
         XAADestroyInfoRec(pNv->xaa);
+    if(pNv->exa)
+        exaDriverFini(pScrn->pScreen);
     xf86_cursors_fini(pScreen);
 
     if(xf86ServerIsExiting()) {
@@ -759,10 +790,21 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     if(!pNv->NoAccel) {
         G80InitHW(pScrn);
-        if(!G80XAAInit(pScreen)) {
-            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                       "Hardware acceleration initialization failed\n");
-            return FALSE;
+        switch(pNv->AccelMethod) {
+        case XAA:
+            if(!G80XAAInit(pScreen)) {
+                xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                           "XAA hardware acceleration initialization failed\n");
+                return FALSE;
+            }
+            break;
+        case EXA:
+            if(!G80ExaInit(pScreen, pScrn)) {
+                xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                           "EXA hardware acceleration initialization failed\n");
+                return FALSE;
+            }
+            break;
         }
     }
 

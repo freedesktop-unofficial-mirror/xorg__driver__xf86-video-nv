@@ -1,4 +1,5 @@
 #include <xaa.h>
+#include <exa.h>
 #include <xf86.h>
 #include <xf86int10.h>
 #include <xf86Cursor.h>
@@ -24,6 +25,11 @@ typedef enum ORNum {
    SOR1 = 1
 } ORNum;
 
+typedef enum AccelMethod {
+    XAA,
+    EXA,
+} AccelMethod;
+
 typedef struct G80Rec {
     volatile CARD32 *   reg;
     unsigned char *     mem;
@@ -46,10 +52,14 @@ typedef struct G80Rec {
     OptionInfoPtr       Options;
     Bool                HWCursor;
     Bool                NoAccel;
+    AccelMethod         AccelMethod;
 
     /* XAA */
     XAAInfoRecPtr       xaa;
     CARD32              currentRop;
+
+    /* EXA */
+    ExaDriverPtr        exa;
 
     /* DMA command buffer */
     CARD32              dmaPut;

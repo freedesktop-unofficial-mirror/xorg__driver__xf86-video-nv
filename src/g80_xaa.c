@@ -31,7 +31,7 @@
 #include "g80_dma.h"
 #include "g80_xaa.h"
 
-static void
+void
 G80Sync(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
@@ -47,7 +47,7 @@ G80Sync(ScrnInfoPtr pScrn)
     while(*pSync);
 }
 
-static void
+void
 G80DMAKickoffCallback(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
