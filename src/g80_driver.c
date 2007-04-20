@@ -842,7 +842,6 @@ G80SwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
 static void
 G80AdjustFrame(int scrnIndex, int x, int y, int flags)
 {
-    ErrorF("AdjustFrame unimplemented\n");
 }
 
 static Bool
