@@ -66,7 +66,6 @@ riva_sources = \
          riva_type.h \
          riva_xaa.c
 
-if SUPPORT_G80
 g80_sources = \
          g80_cursor.c \
          g80_cursor.h \
@@ -82,4 +81,3 @@ g80_sources = \
          g80_type.h \
          g80_xaa.c \
          g80_xaa.h
-endif

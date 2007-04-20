@@ -333,12 +333,11 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0244, "GeForce Go 6150" },
   { 0x10DE0247, "GeForce Go 6100" },
 
-#if SUPPORT_G80
+/*************** G8x ***************/
   { 0x10DE0191, "GeForce 8800 GTX" },
   { 0x10DE0193, "GeForce 8800 GTS" },
   { 0x10DE019D, "Quadro FX 5600" },
   { 0x10DE019E, "Quadro FX 4600" },
-#endif
 
   {-1, NULL}
 };
@@ -655,7 +654,6 @@ NVGetPCIXpressChip (pciVideoPtr pVideo)
     return pciid;
 }
 
-#if SUPPORT_G80
 static Bool
 NVIsG80(int chipType)
 {
@@ -668,7 +666,6 @@ NVIsG80(int chipType)
 
     return FALSE;
 }
-#endif
 
 /* Mandatory */
 static Bool
@@ -754,10 +751,8 @@ NVProbe(DriverPtr drv, int flags)
                default:  break;  /* we don't recognize it */
                }
 
-#if SUPPORT_G80
                if(NVIsG80((*ppPci)->chipType))
                    canHandle = TRUE;
-#endif
 
                if(canHandle) {
                    NVChipsets[numUsed].token = pciid;
@@ -795,11 +790,9 @@ NVProbe(DriverPtr drv, int flags)
         if(pPci->vendor == PCI_VENDOR_NVIDIA_SGS) {
             if(RivaGetScrnInfoRec(NVPciChipsets, usedChips[i]))
                 foundScreen = TRUE;
-#if SUPPORT_G80
         } else if (NVIsG80(pPci->chipType)) {
             if(G80GetScrnInfoRec(NVPciChipsets, usedChips[i]))
                 foundScreen = TRUE;
-#endif
         } else {
             if(NVGetScrnInfoRec(NVPciChipsets, usedChips[i])) 
 	        foundScreen = TRUE;
