@@ -43,7 +43,6 @@
 #include "g80_type.h"
 #include "g80_cursor.h"
 #include "g80_display.h"
-#include "g80_ddc.h"
 #include "g80_dma.h"
 #include "g80_output.h"
 #include "g80_xaa.h"

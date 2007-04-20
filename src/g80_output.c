@@ -30,7 +30,6 @@
 #include <xf86DDC.h>
 
 #include "g80_type.h"
-#include "g80_ddc.h"
 #include "g80_output.h"
 
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
