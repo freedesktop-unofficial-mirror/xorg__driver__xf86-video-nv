@@ -341,6 +341,8 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0400, "GeForce 8600 GTS" },
   { 0x10DE0402, "GeForce 8600 GT" },
   { 0x10DE0421, "GeForce 8500 GT" },
+  { 0x10DE0422, "GeForce 8400 GS" },
+  { 0x10DE0423, "GeForce 8300 GS" },
 #endif
 
   {-1, NULL}
