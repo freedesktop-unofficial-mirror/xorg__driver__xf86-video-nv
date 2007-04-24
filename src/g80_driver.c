@@ -30,6 +30,7 @@
 
 #include <xf86_OSproc.h>
 #include <xf86Resources.h>
+#include <xf86RandR12.h>
 #include <mipointer.h>
 #include <mibstore.h>
 #include <micmap.h>
@@ -42,8 +43,8 @@
 #include "g80_type.h"
 #include "g80_cursor.h"
 #include "g80_display.h"
-#include "g80_ddc.h"
 #include "g80_dma.h"
+#include "g80_output.h"
 #include "g80_xaa.h"
 
 #define G80_REG_SIZE (1024 * 1024 * 16)
@@ -95,13 +96,11 @@ static const char *int10Symbols[] = {
 typedef enum {
     OPTION_HW_CURSOR,
     OPTION_NOACCEL,
-    OPTION_BACKEND_MODE,
 } G80Opts;
 
 static const OptionInfoRec G80Options[] = {
     { OPTION_HW_CURSOR,         "HWCursor",     OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_NOACCEL,           "NoAccel",      OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_BACKEND_MODE,      "BackendMode",  OPTV_ANYSTR,    {0}, FALSE },
     { -1,                       NULL,           OPTV_NONE,      {0}, FALSE }
 };
 
@@ -122,17 +121,47 @@ G80FreeRec(ScrnInfoPtr pScrn)
 }
 
 static Bool
+G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
+{
+    G80Ptr pNv = G80PTR(pScrn);
+    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    int pitch = width * (pScrn->bitsPerPixel / 8);
+    int i;
+
+    pitch = (pitch + 255) & ~255;
+
+    pScrn->virtualX = width;
+    pScrn->virtualY = height;
+
+    /* Can resize if XAA is disabled */
+    if(!pNv->xaa) {
+        (*pScrn->pScreen->GetScreenPixmap)(pScrn->pScreen)->devKind = pitch;
+        pScrn->displayWidth = pitch / (pScrn->bitsPerPixel / 8);
+
+        /* Re-set the modes so the new pitch is taken into account */
+        for(i = 0; i < xf86_config->num_crtc; i++) {
+            xf86CrtcPtr crtc = xf86_config->crtc[i];
+            if(crtc->enabled)
+                xf86CrtcSetMode(crtc, &crtc->mode, crtc->rotation, crtc->x, crtc->y);
+        }
+    }
+
+    return TRUE;
+}
+
+static const xf86CrtcConfigFuncsRec randr12_screen_funcs = {
+    .resize = G80ResizeScreen,
+};
+
+static Bool
 G80PreInit(ScrnInfoPtr pScrn, int flags)
 {
     G80Ptr pNv;
     EntityInfoPtr pEnt;
     pciVideoPtr pPci;
     PCITAG pcitag;
-    ClockRangePtr clockRanges;
     MessageType from;
     Bool primary;
-    int i;
-    char *s;
     const rgb zeros = {0, 0, 0};
     const Gamma gzeros = {0.0, 0.0, 0.0};
     CARD32 tmp;
@@ -250,18 +279,6 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
 
     if(!xf86SetGamma(pScrn, gzeros)) goto fail;
 
-    /*
-     * Setup the ClockRanges, which describe what clock ranges are available,
-     * and what sort of modes they can be used for.
-     */
-    clockRanges = xnfcalloc(sizeof(ClockRange), 1);
-    clockRanges->next = NULL;
-    clockRanges->minClock = 0;
-    clockRanges->maxClock = 400000;
-    clockRanges->clockIndex = -1;       /* programmable */
-    clockRanges->doubleScanAllowed = TRUE;
-    clockRanges->interlaceAllowed = TRUE;
-
     /* Map memory */
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "MMIO registers at 0x%lx\n",
                pPci->memBase[0]);
@@ -310,62 +327,39 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     else
         pNv->table1 -= 0x10000;
 
-    /* Probe DDC */
-    /* If no DDC info found, try DAC load detection */
+    xf86CrtcConfigInit(pScrn, &randr12_screen_funcs);
+    xf86CrtcSetSizeRange(pScrn, 320, 200, 8192, 8192);
+
     if(!xf86LoadSubModule(pScrn, "i2c")) goto fail;
     if(!xf86LoadSubModule(pScrn, "ddc")) goto fail;
     xf86LoaderReqSymLists(i2cSymbols, ddcSymbols, NULL);
-    if(!G80ProbeDDC(pScrn) && !G80LoadDetect(pScrn)) {
-        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No display devices found\n");
-        goto fail;
-    }
-    /* Hardcode HEAD0 for now.  RandR 1.2 will move this into a Crtc struct. */
-    pNv->head = 0;
 
-    i = xf86ValidateModes(pScrn, pScrn->monitor->Modes,
-                          pScrn->display->modes, clockRanges,
-                          NULL, 256, 8192,
-                          512, 128, 8192,
-                          pScrn->display->virtualX,
-                          pScrn->display->virtualY,
-                          pNv->videoRam * 1024 - G80_RESERVED_VIDMEM,
-                          LOOKUP_BEST_REFRESH);
-    if(i == -1) goto fail;
-    xf86PruneDriverModes(pScrn);
-    if(i == 0 || !pScrn->modes) {
-        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No valid modes found\n");
+    if(!G80DispPreInit(pScrn)) goto fail;
+    /* Read the DDC routing table and create outputs */
+    if(!G80CreateOutputs(pScrn)) goto fail;
+    /* Create the crtcs */
+    G80DispCreateCrtcs(pScrn);
+
+    /* We can grow the desktop if XAA is disabled */
+    if(!xf86InitialConfiguration(pScrn, pNv->NoAccel)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+            "No valid initial configuration found\n");
         goto fail;
     }
-    xf86SetCrtcForModes(pScrn, 0);
+    pScrn->displayWidth = (pScrn->virtualX + 255) & ~255;
+
+    if(!xf86RandR12PreInit(pScrn)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "RandR initialization failure\n");
+        goto fail;
+    }
+    if(!pScrn->modes) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No modes\n");
+        goto fail;
+    }
 
     pScrn->currentMode = pScrn->modes;
     xf86PrintModes(pScrn);
     xf86SetDpi(pScrn, 0, 0);
-
-    /* Custom backend timings */
-    pNv->BackendMode = NULL;
-    if((s = xf86GetOptValString(pNv->Options, OPTION_BACKEND_MODE))) {
-        DisplayModePtr mode;
-
-        for(mode = pScrn->modes; ; mode = mode->next) {
-            if(!strcmp(mode->name, s))
-                break;
-            if(mode->next == pScrn->modes) {
-                mode = NULL;
-                break;
-            }
-        }
-
-        pNv->BackendMode = mode;
-
-        if(mode)
-            xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "BackendMode: Using mode "
-                       "\"%s\" for display timings\n", mode->name);
-        else
-            xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "Cannot honor "
-                       "\"BackendMode\" option: no mode named \"%s\" "
-                       "found.\n", s);
-    }
 
     /* Load fb */
     if(!xf86LoadSubModule(pScrn, "fb")) goto fail;
@@ -401,15 +395,11 @@ fail:
 static Bool
 AcquireDisplay(ScrnInfoPtr pScrn)
 {
-    G80Ptr pNv = G80PTR(pScrn);
-
     if(!G80DispInit(pScrn))
         return FALSE;
-    if(!G80CursorAcquire(pNv))
+    if(!G80CursorAcquire(pScrn))
         return FALSE;
-    if(!G80DispSetMode(pScrn, pScrn->currentMode))
-        return FALSE;
-    G80DispDPMSSet(pScrn, DPMSModeOn, 0);
+    xf86SetDesiredModes(pScrn);
 
     return TRUE;
 }
@@ -422,7 +412,7 @@ ReleaseDisplay(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
 
-    G80CursorRelease(pNv);
+    G80CursorRelease(pScrn);
     G80DispShutdown(pScrn);
 
     if(pNv->int10 && pNv->int10Mode) {
@@ -450,8 +440,7 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
 
     if(pNv->xaa)
         XAADestroyInfoRec(pNv->xaa);
-    if(pNv->HWCursor)
-        xf86DestroyCursorInfoRec(pNv->CursorInfo);
+    xf86_cursors_fini(pScreen);
 
     if(xf86ServerIsExiting()) {
         if(pNv->int10) xf86FreeInt10(pNv->int10);
@@ -477,6 +466,8 @@ G80BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
     if(pNv->DMAKickoffCallback)
         (*pNv->DMAKickoffCallback)(pScrnInfo);
 
+    G80OutputResetCachedStatus(pScrnInfo);
+
     pScreen->BlockHandler = pNv->BlockHandler;
     (*pScreen->BlockHandler) (i, blockData, pTimeout, pReadmask);
     pScreen->BlockHandler = G80BlockHandler;
@@ -485,13 +476,7 @@ G80BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
 static Bool
 G80SaveScreen(ScreenPtr pScreen, int mode)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
-
-    if(!pScrn->vtSema) return FALSE;
-
-    G80DispBlankScreen(pScrn, !xf86IsUnblank(mode));
-
-    return TRUE;
+    return FALSE;
 }
 
 static void
@@ -731,8 +716,6 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     /* pad the screen pitch to 256 bytes */
     pitch = pScrn->displayWidth * (pScrn->bitsPerPixel / 8);
-    pitch = (pitch + 0xff) & ~0xff;
-    pScrn->displayWidth = pitch / (pScrn->bitsPerPixel / 8);
 
     /* fb init */
     if(!fbScreenInit(pScreen, pNv->mem,
@@ -779,7 +762,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
         if(!G80XAAInit(pScreen)) {
             xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
                        "Hardware acceleration initialization failed\n");
-            pNv->NoAccel = FALSE;
+            return FALSE;
         }
     }
 
@@ -808,7 +791,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
                             CMAP_PALETTED_TRUECOLOR))
         return FALSE;
 
-    xf86DPMSInit(pScreen, G80DispDPMSSet, 0);
+    xf86DPMSInit(pScreen, xf86DPMSSet, 0);
 
     /* Clear the screen */
     if(pNv->xaa) {
@@ -834,6 +817,9 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     pNv->BlockHandler = pScreen->BlockHandler;
     pScreen->BlockHandler = G80BlockHandler;
 
+    if(!xf86CrtcScreenInit(pScreen))
+        return FALSE;
+
     return TRUE;
 }
 
@@ -847,22 +833,12 @@ static Bool
 G80SwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
 {
     ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
-
-    return G80DispSetMode(pScrn, mode);
+    return xf86SetSingleMode(pScrn, mode, RR_Rotate_0);
 }
 
 static void
 G80AdjustFrame(int scrnIndex, int x, int y, int flags)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
-    G80Ptr pNv = G80PTR(pScrn);
-
-    if(x + pScrn->currentMode->HDisplay > pScrn->virtualX ||
-       y + pScrn->currentMode->VDisplay > pScrn->virtualY ||
-       x < 0 || y < 0)
-        /* Ignore bogus panning */
-        return;
-    G80DispAdjustFrame(pNv, x, y);
 }
 
 static Bool

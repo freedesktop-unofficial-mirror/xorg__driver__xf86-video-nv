@@ -7,9 +7,6 @@
 #include "xf86.h"
 #include "xf86_OSproc.h"
 #include "xf86Resources.h"
-#if USE_LIBC_WRAPPER
-#include "xf86_ansic.h"
-#endif
 #include "compiler.h"
 #include "xf86PciInfo.h"
 #include "xf86Pci.h"
@@ -83,11 +80,7 @@ static int  NVGetBlitPortAttribute(ScrnInfoPtr, Atom ,INT32 *, pointer);
 static void NVStopOverlayVideo(ScrnInfoPtr, pointer, Bool);
 static void NVStopBlitVideo(ScrnInfoPtr, pointer, Bool);
 
-#if HAVE_XV_DRAWABLE
 static int  NVPutImage( ScrnInfoPtr, short, short, short, short, short, short, short, short, int, unsigned char*, short, short, Bool, RegionPtr, pointer, DrawablePtr);
-#else
-static int  NVPutImage( ScrnInfoPtr, short, short, short, short, short, short, short, short, int, unsigned char*, short, short, Bool, RegionPtr, pointer);
-#endif
 
 static void NVQueryBestSize(ScrnInfoPtr, Bool, short, short, short, short, unsigned int *, unsigned int *, pointer);
 static int  NVQueryImageAttributes(ScrnInfoPtr, int, unsigned short *, unsigned short *,  int *, int *);
@@ -1012,10 +1005,8 @@ static int NVPutImage
     short        height, 
     Bool         Sync,
     RegionPtr    clipBoxes,
-    pointer      data
-#if HAVE_XV_DRAWABLE
-    , DrawablePtr  pDraw
-#endif
+    pointer      data,
+    DrawablePtr  pDraw
 )
 {
     NVPortPrivPtr pPriv = (NVPortPrivPtr)data;

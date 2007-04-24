@@ -333,7 +333,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0244, "GeForce Go 6150" },
   { 0x10DE0247, "GeForce Go 6100" },
 
-#if SUPPORT_G80
+/*************** G8x ***************/
   { 0x10DE0191, "GeForce 8800 GTX" },
   { 0x10DE0193, "GeForce 8800 GTS" },
   { 0x10DE019D, "Quadro FX 5600" },
@@ -343,7 +343,6 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0421, "GeForce 8500 GT" },
   { 0x10DE0422, "GeForce 8400 GS" },
   { 0x10DE0423, "GeForce 8300 GS" },
-#endif
 
   {-1, NULL}
 };
@@ -660,7 +659,6 @@ NVGetPCIXpressChip (pciVideoPtr pVideo)
     return pciid;
 }
 
-#if SUPPORT_G80
 static Bool
 NVIsG80(int chipType)
 {
@@ -673,7 +671,6 @@ NVIsG80(int chipType)
 
     return FALSE;
 }
-#endif
 
 /* Mandatory */
 static Bool
@@ -759,10 +756,8 @@ NVProbe(DriverPtr drv, int flags)
                default:  break;  /* we don't recognize it */
                }
 
-#if SUPPORT_G80
                if(NVIsG80((*ppPci)->chipType))
                    canHandle = TRUE;
-#endif
 
                if(canHandle) {
                    NVChipsets[numUsed].token = pciid;
@@ -800,11 +795,9 @@ NVProbe(DriverPtr drv, int flags)
         if(pPci->vendor == PCI_VENDOR_NVIDIA_SGS) {
             if(RivaGetScrnInfoRec(NVPciChipsets, usedChips[i]))
                 foundScreen = TRUE;
-#if SUPPORT_G80
         } else if (NVIsG80(pPci->chipType)) {
             if(G80GetScrnInfoRec(NVPciChipsets, usedChips[i]))
                 foundScreen = TRUE;
-#endif
         } else {
             if(NVGetScrnInfoRec(NVPciChipsets, usedChips[i])) 
 	        foundScreen = TRUE;
@@ -1027,7 +1020,6 @@ Bool NVI2CInit(ScrnInfoPtr pScrn)
 }
 
 
-#ifdef USE_CVTMODE_FUNC
 /* Copied from ddc/Property.c */
 static DisplayModePtr
 NVModesAdd(DisplayModePtr Modes, DisplayModePtr Additions)
@@ -1051,7 +1043,6 @@ NVModesAdd(DisplayModePtr Modes, DisplayModePtr Additions)
 
     return Modes;
 }
-#endif
 
 /* Mandatory */
 Bool
@@ -1062,9 +1053,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     int i, max_width, max_height;
     ClockRangePtr clockRanges;
     const char *s;
-#ifdef USE_CVTMODE_FUNC
-    int config_mon_rates;
-#endif
+    Bool config_mon_rates;
 
     if (flags & PROBE_DETECT) {
         EntityInfoPtr pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
@@ -1522,13 +1511,11 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     pNv->alphaCursor = (pNv->Architecture >= NV_ARCH_10) &&
                        ((pNv->Chipset & 0x0ff0) != 0x0100);
 
-#ifdef USE_CVTMODE_FUNC
     if ((pScrn->monitor->nHsync == 0) && 
 	(pScrn->monitor->nVrefresh == 0))
 	config_mon_rates = FALSE;
     else
 	config_mon_rates = TRUE;
-#endif
 
     NVCommonSetup(pScrn);
 
@@ -1599,7 +1586,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
        max_height = 4096;
     }
 
-#ifdef USE_CVTMODE_FUNC
     /* If DFP, add a modeline corresponding to its panel size */
     if (pNv->FlatPanel && !pNv->Television && pNv->fpWidth && pNv->fpHeight) {
 	DisplayModePtr Mode;
@@ -1628,7 +1614,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	    pScrn->monitor->nVrefresh = 1;
 	}
     }
-#endif
 
     /*
      * xf86ValidateModes will check that the mode HTotal and VTotal values

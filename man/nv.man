@@ -58,12 +58,9 @@ NV40, NV41, NV43, NV44, NV45, C51
 .TP 22
 .B GeForce 7XXX
 G70, G71, G72, G73
-.de G8
 .TP 22
 .B GeForce 8XXX
 G80, G84, G86
-..
-.if __support_g80__ .G8
 
 .SH CONFIGURATION DETAILS
 Please refer to __xconfigfile__(__filemansuffix__) for general configuration
@@ -136,7 +133,6 @@ Default: no rotation support.
 Enable or disable use of the shadow framebuffer layer.  Default: off.
 .
 .\" ******************** begin G80 section ********************
-.de G8
 .PP
 The following driver
 .B Options
@@ -147,15 +143,6 @@ Enable or disable the hardware cursor.  Default: on.
 .TP
 .BI "Option \*qNoAccel\*q \*q" boolean \*q
 Disable or enable acceleration.  Default: acceleration is enabled.
-.TP
-.BI "Option \*qBackendMode\*q \*q" mode \*q
-Designate a mode to be used as the physical mode driving the display.
-The screen will be scaled to fit the requested mode.
-For example, if
-.B Option \*qBackendMode\*q \*q1280x1024\*q
-is specified, the monitor will always display the 1280x1024 mode and the screen will be scaled to match.
-..
-.if __support_g80__ .G8
 .\" ******************** end G80 section ********************
 .
 .SH "SEE ALSO"
