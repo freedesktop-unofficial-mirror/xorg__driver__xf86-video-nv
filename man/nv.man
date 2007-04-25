@@ -143,6 +143,15 @@ Enable or disable the hardware cursor.  Default: on.
 .TP
 .BI "Option \*qNoAccel\*q \*q" boolean \*q
 Disable or enable acceleration.  Default: acceleration is enabled.
+.TP
+.BI "Option \*qAccelMethod\*q \*q" string \*q
+Choose acceleration architecture, either \*qXAA\*q or \*qEXA\*q.
+XAA is the old but stable architecture.
+EXA is newer and supports resizing the desktop larger than it started out with RandR 1.2.
+If you choose to use EXA, you might also consider setting
+.B Option \*qMigrationHeuristic\*q \*qgreedy\*q
+to improve performance.
+Default: XAA.
 .\" ******************** end G80 section ********************
 .
 .SH "SEE ALSO"

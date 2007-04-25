@@ -60,6 +60,7 @@ typedef struct G80Rec {
 
     /* EXA */
     ExaDriverPtr        exa;
+    ExaOffscreenArea   *exaScreenArea;
 
     /* DMA command buffer */
     CARD32              dmaPut;

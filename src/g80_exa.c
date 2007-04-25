@@ -302,7 +302,7 @@ Bool G80ExaInit(ScreenPtr pScreen, ScrnInfoPtr pScrn)
     exa->exa_major         = EXA_VERSION_MAJOR;
     exa->exa_minor         = EXA_VERSION_MINOR;
     exa->memoryBase        = pNv->mem;
-    exa->offScreenBase     = pitch * pScrn->virtualY;
+    exa->offScreenBase     = 0;
     exa->memorySize        = pitch * pNv->offscreenHeight;
     exa->pixmapOffsetAlign = 256;
     exa->pixmapPitchAlign  = 256;

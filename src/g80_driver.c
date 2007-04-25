@@ -133,6 +133,7 @@ G80FreeRec(ScrnInfoPtr pScrn)
 static Bool
 G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
 {
+    ScreenPtr pScreen = pScrn->pScreen;
     G80Ptr pNv = G80PTR(pScrn);
     xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
     int pitch = width * (pScrn->bitsPerPixel / 8);
@@ -143,8 +144,8 @@ G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
     pScrn->virtualX = width;
     pScrn->virtualY = height;
 
-    /* Can resize if XAA is disabled */
-    if(!pNv->xaa) {
+    /* Can resize if XAA is disabled or EXA is enabled */
+    if(!pNv->xaa || pNv->exa) {
         (*pScrn->pScreen->GetScreenPixmap)(pScrn->pScreen)->devKind = pitch;
         pScrn->displayWidth = pitch / (pScrn->bitsPerPixel / 8);
 
@@ -153,6 +154,23 @@ G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
             xf86CrtcPtr crtc = xf86_config->crtc[i];
             if(crtc->enabled)
                 xf86CrtcSetMode(crtc, &crtc->mode, crtc->rotation, crtc->x, crtc->y);
+        }
+    }
+
+    /*
+     * If EXA is enabled, use exaOffscreenAlloc to carve out a chunk of memory
+     * for the screen.
+     */
+    if(pNv->exa) {
+        if(pNv->exaScreenArea)
+            exaOffscreenFree(pScreen, pNv->exaScreenArea);
+        pNv->exaScreenArea = exaOffscreenAlloc(pScreen, pitch * pScrn->virtualY,
+                                               256, TRUE, NULL, NULL);
+        if(!pNv->exaScreenArea || pNv->exaScreenArea->offset != 0) {
+            xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                       "Failed to reserve EXA memory for the screen or EXA "
+                       "returned an area with a nonzero offset.  Don't be "
+                       "surprised if your screen is corrupt.\n");
         }
     }
 
@@ -362,7 +380,7 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     G80DispCreateCrtcs(pScrn);
 
     /* We can grow the desktop if XAA is disabled */
-    if(!xf86InitialConfiguration(pScrn, pNv->NoAccel)) {
+    if(!xf86InitialConfiguration(pScrn, pNv->NoAccel || pNv->AccelMethod == EXA)) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
             "No valid initial configuration found\n");
         goto fail;
@@ -469,8 +487,13 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
 
     if(pNv->xaa)
         XAADestroyInfoRec(pNv->xaa);
-    if(pNv->exa)
+    if(pNv->exa) {
+        if(pNv->exaScreenArea) {
+            exaOffscreenFree(pScreen, pNv->exaScreenArea);
+            pNv->exaScreenArea = NULL;
+        }
         exaDriverFini(pScrn->pScreen);
+    }
     xf86_cursors_fini(pScreen);
 
     if(xf86ServerIsExiting()) {
