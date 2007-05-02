@@ -174,7 +174,7 @@ NVIsConnected (ScrnInfoPtr pScrn, int output)
 {
     NVPtr pNv = NVPTR(pScrn);
     volatile U032 *PRAMDAC = pNv->PRAMDAC0;
-    CARD32 reg52C, reg608, dac0_reg608;
+    CARD32 reg52C, reg608, dac0_reg608 = 0;
     Bool present;
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
