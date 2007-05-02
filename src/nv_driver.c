@@ -336,6 +336,7 @@ static SymTabRec NVKnownChipsets[] =
 #if SUPPORT_G80
   { 0x10DE0191, "GeForce 8800 GTX" },
   { 0x10DE0193, "GeForce 8800 GTS" },
+  { 0x10DE0194, "GeForce 8800 Ultra" },
   { 0x10DE019D, "Quadro FX 5600" },
   { 0x10DE019E, "Quadro FX 4600" },
   { 0x10DE0400, "GeForce 8600 GTS" },
