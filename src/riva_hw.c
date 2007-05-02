@@ -659,7 +659,7 @@ static void CalcStateExt
     int		   flags 
 )
 {
-    int pixelDepth, VClk, m, n, p;
+    int pixelDepth, VClk = 0, m = 0, n = 0, p = 0;
     /*
      * Save mode parameters.
      */
