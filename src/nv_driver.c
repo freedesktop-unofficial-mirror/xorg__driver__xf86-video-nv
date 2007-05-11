@@ -34,6 +34,7 @@
 #include "nv_include.h"
 
 #include "xf86int10.h"
+#include "vbeModes.h"
 
 const   OptionInfoRec * RivaAvailableOptions(int chipid, int busid);
 Bool    RivaGetScrnInfoRec(PciChipsets *chips, int chip);
@@ -70,8 +71,10 @@ static Bool	NVMapMem(ScrnInfoPtr pScrn);
 static Bool	NVMapMemFBDev(ScrnInfoPtr pScrn);
 static Bool	NVUnmapMem(ScrnInfoPtr pScrn);
 static void	NVSave(ScrnInfoPtr pScrn);
+static void	NVSaveRestoreVBE(ScrnInfoPtr, vbeSaveRestoreFunction);
 static void	NVRestore(ScrnInfoPtr pScrn);
 static Bool	NVModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
+static Bool	NVSetModeVBE(ScrnInfoPtr pScrn, DisplayModePtr pMode);
 
 
 /*
@@ -411,6 +414,17 @@ static const char *vbeSymbols[] = {
     "vbeDoEDID",
     NULL
 };
+
+static const char *vbeModeSymbols[] = {
+    "VBEExtendedInit",
+    "VBEGetVBEInfo",
+    "VBEGetModePool",
+    "VBEValidateModes",
+    "VBESetModeParameters",
+    "VBEGetVBEMode",
+    "VBESetVBEMode",
+    NULL
+};
 #endif
 
 static const char *i2cSymbols[] = {
@@ -489,7 +503,8 @@ typedef enum {
     OPTION_FP_DITHER,
     OPTION_CRTC_NUMBER,
     OPTION_FP_SCALE,
-    OPTION_FP_TWEAK
+    OPTION_FP_TWEAK,
+    OPTION_DUALHEAD,
 } NVOpts;
 
 
@@ -506,6 +521,7 @@ static const OptionInfoRec NVOptions[] = {
     { OPTION_CRTC_NUMBER,	"CrtcNumber",	OPTV_INTEGER,	{0}, FALSE },
     { OPTION_FP_SCALE,          "FPScale",      OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_FP_TWEAK,          "FPTweak",      OPTV_INTEGER,   {0}, FALSE },
+    { OPTION_DUALHEAD,          "DualHead",     OPTV_BOOLEAN,   {0}, FALSE },
     { -1,                       NULL,           OPTV_NONE,      {0}, FALSE }
 };
 
@@ -828,6 +844,27 @@ NVSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
     return NVModeInit(pScrn, mode);
 }
 
+Bool
+NVSwitchModeVBE(int scrnIndex, DisplayModePtr mode, int flags)
+{
+    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+    NVPtr pNv = NVPTR(pScrn);
+    const Bool disableAccess = pNv->accessEnabled;
+
+    if(disableAccess)
+        pScrn->EnableDisableFBAccess(scrnIndex, FALSE);
+
+    NVSync(pScrn);
+    if (!NVSetModeVBE(pScrn, mode))
+        return FALSE;
+    NVAdjustFrame(scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+
+    if(disableAccess)
+        pScrn->EnableDisableFBAccess(scrnIndex, TRUE);
+
+    return TRUE;
+}
+
 /*
  * This function is used to initialize the Start Address - the first
  * displayed location in the video memory.
@@ -876,6 +913,17 @@ NVEnterVTFBDev(int scrnIndex, int flags)
     return TRUE;
 }
 
+static Bool
+NVEnterVTVBE(int scrnIndex, int flags)
+{
+    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+
+    if (!NVSetModeVBE(pScrn, pScrn->currentMode))
+        return FALSE;
+    NVAdjustFrame(scrnIndex, 0, 0, 0);
+    return TRUE;
+}
+
 /*
  * This is called when VT switching away from the X server.  Its job is
  * to restore the previous (text) mode.
@@ -895,7 +943,14 @@ NVLeaveVT(int scrnIndex, int flags)
     NVLockUnlock(pNv, 1);
 }
 
+static void
+NVLeaveVTVBE(int scrnIndex, int flags)
+{
+    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
 
+    NVSync(pScrn);
+    NVSaveRestoreVBE(pScrn, MODE_RESTORE);
+}
 
 static void 
 NVBlockHandler (
@@ -937,9 +992,15 @@ NVCloseScreen(int scrnIndex, ScreenPtr pScreen)
     NVPtr pNv = NVPTR(pScrn);
 
     if (pScrn->vtSema) {
-        NVSync(pScrn);
-        NVRestore(pScrn);
-        NVLockUnlock(pNv, 1);
+        if (!pNv->NoAccel)
+            NVSync(pScrn);
+
+        if (pNv->VBEDualhead) {
+            NVSaveRestoreVBE(pScrn, MODE_RESTORE);
+        } else {
+            NVRestore(pScrn);
+            NVLockUnlock(pNv, 1);
+        }
     }
 
     NVUnmapMem(pScrn);
@@ -962,6 +1023,16 @@ NVCloseScreen(int scrnIndex, ScreenPtr pScreen)
     pScreen->BlockHandler = pNv->BlockHandler;
     return (*pScreen->CloseScreen)(scrnIndex, pScreen);
 }
+
+static void
+NVEnableDisableFBAccess(int scrnIndex, Bool enable)
+{
+    NVPtr pNv = NVPTR(xf86Screens[scrnIndex]);
+
+    pNv->accessEnabled = enable;
+    pNv->EnableDisableFBAccess(scrnIndex, enable);
+}
+
 
 /* Free up any persistent data structures */
 
@@ -1415,7 +1486,43 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     } else {
         pNv->usePanelTweak = FALSE;
     }
-    
+
+    if (xf86ReturnOptValBool(pNv->Options, OPTION_DUALHEAD, FALSE)) {
+        if (pNv->FBDev)
+            xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+                       "FBDev and Dualhead are incompatible.\n");
+        else
+            pNv->VBEDualhead = TRUE;
+    }
+
+    if (pNv->VBEDualhead) {
+        if (!xf86LoadSubModule(pScrn, "vbe")) {
+            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                       "Couldn't load the VBE module and Dualhead is "
+                       "enabled.\n");
+            return FALSE;
+        }
+        xf86LoaderReqSymLists(vbeModeSymbols, NULL);
+        pNv->pVbe = VBEExtendedInit(NULL, pNv->pEnt->index,
+                                    SET_BIOS_SCRATCH | RESTORE_BIOS_SCRATCH);
+        if (!pNv->pVbe) return FALSE;
+
+        pNv->pVbeInfo = VBEGetVBEInfo(pNv->pVbe);
+        if (!pNv->pVbeInfo) return FALSE;
+
+        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG,
+                   "Using VBE dual-head mode.\n");
+
+        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+                   "Using software cursor.\n");
+        pNv->HWCursor = FALSE;
+
+        pScrn->SwitchMode    = NVSwitchModeVBE;
+        pScrn->EnterVT       = NVEnterVTVBE;
+        pScrn->LeaveVT       = NVLeaveVTVBE;
+        pScrn->ValidMode     = NULL;
+    }
+
     if (pNv->pEnt->device->MemBase != 0) {
 	/* Require that the config file value matches one of the PCI values. */
 	if (!xf86CheckPciMemBase(pNv->PciInfo, pNv->pEnt->device->MemBase)) {
@@ -1637,14 +1744,31 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
      * pScrn->maxVValue are set.  Since our NVValidMode() already takes
      * care of this, we don't worry about setting them here.
      */
-    i = xf86ValidateModes(pScrn, pScrn->monitor->Modes,
-                          pScrn->display->modes, clockRanges,
-                          NULL, 256, max_width,
-                          512, 128, max_height,
-                          pScrn->display->virtualX,
-                          pScrn->display->virtualY,
-                          pNv->ScratchBufferStart,
-                          LOOKUP_BEST_REFRESH);
+    if (pNv->VBEDualhead) {
+        pScrn->modePool = VBEGetModePool(pScrn, pNv->pVbe, pNv->pVbeInfo,
+                                         V_MODETYPE_VBE);
+
+        VBESetModeNames(pScrn->modePool);
+        i = VBEValidateModes(pScrn, pScrn->monitor->Modes,
+                             pScrn->display->modes, clockRanges,
+                             NULL, 256, max_width,
+                             512, 128, max_height,
+                             pScrn->display->virtualX,
+                             pScrn->display->virtualY,
+                             pNv->ScratchBufferStart,
+                             LOOKUP_BEST_REFRESH);
+        if (i > 0)
+            VBESetModeParameters(pScrn, pNv->pVbe);
+    } else {
+        i = xf86ValidateModes(pScrn, pScrn->monitor->Modes,
+                              pScrn->display->modes, clockRanges,
+                              NULL, 256, max_width,
+                              512, 128, max_height,
+                              pScrn->display->virtualX,
+                              pScrn->display->virtualY,
+                              pNv->ScratchBufferStart,
+                              LOOKUP_BEST_REFRESH);
+    }
 
     if (i < 1 && pNv->FBDev) {
 	fbdevHWUseBuildinMode(pScrn);
@@ -1676,6 +1800,22 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
      * are not pre-initialised at all.
      */
     xf86SetCrtcForModes(pScrn, 0);
+
+    if (pNv->VBEDualhead) {
+        DisplayModePtr p = pScrn->modes;
+
+        /*
+         * Loop through modes and double their widths.  Stash the real width in
+         * CrtcHDisplay.  Also adjust the screen dimensions.
+         */
+        do {
+            p->CrtcHDisplay = p->HDisplay;
+            p->HDisplay *= 2;
+        } while ((p = p->next) != pScrn->modes);
+
+        pScrn->virtualX *= 2;
+        pScrn->displayWidth *= 2;
+    }
 
     /* Set the current mode to the first in the list */
     pScrn->currentMode = pScrn->modes;
@@ -1858,6 +1998,32 @@ NVModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
     return TRUE;
 }
 
+static Bool
+NVSetModeVBE(ScrnInfoPtr pScrn, DisplayModePtr pMode)
+{
+    NVPtr pNv = NVPTR(pScrn);
+    VbeModeInfoData *data;
+    int mode;
+
+    data = (VbeModeInfoData*)pMode->Private;
+    mode = data->mode | 1 << 14;
+
+    if(!VBESetVBEMode(pNv->pVbe, mode, data->block))
+        return FALSE;
+    pNv->PCRTC0[0x820/4] = pNv->PCRTC0[0x2820/4] =
+        pScrn->displayWidth * (pScrn->bitsPerPixel / 8);
+    pNv->vbeCRTC1Offset = pMode->CrtcHDisplay * (pScrn->bitsPerPixel / 8);
+
+    pScrn->vtSema = TRUE;
+
+    NVLoadStateExt(pNv, NULL);
+    NVResetGraphics(pScrn);
+
+    pNv->CurrentLayout.mode = pMode;
+
+    return TRUE;
+}
+
 /*
  * Restore the initial (text) mode.
  */
@@ -2030,6 +2196,10 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	fbdevHWSave(pScrn);
 	if (!fbdevHWModeInit(pScrn, pScrn->currentMode))
 	    return FALSE;
+    } else if (pNv->VBEDualhead) {
+        NVSaveRestoreVBE(pScrn, MODE_SAVE);
+        if (!NVSetModeVBE(pScrn, pScrn->currentMode))
+            return FALSE;
     } else {
 	/* Save the current state */
 	NVSave(pScrn);
@@ -2225,6 +2395,10 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     pNv->BlockHandler = pScreen->BlockHandler;
     pScreen->BlockHandler = NVBlockHandler;
 
+    pNv->accessEnabled = TRUE;
+    pNv->EnableDisableFBAccess = pScrn->EnableDisableFBAccess;
+    pScrn->EnableDisableFBAccess = NVEnableDisableFBAccess;
+
 #ifdef RANDR
     /* Install our DriverFunc.  We have to do it this way instead of using the
      * HaveDriverFuncs argument to xf86AddDriver, because InitOutput clobbers
@@ -2261,6 +2435,20 @@ NVSave(ScrnInfoPtr pScrn)
     }
 
     NVDACSave(pScrn, vgaReg, nvReg, pNv->Primary);
+}
+
+static void
+NVSaveRestoreVBE(ScrnInfoPtr pScrn, vbeSaveRestoreFunction function)
+{
+    NVPtr pNv = NVPTR(pScrn);
+
+    if (function == MODE_SAVE) {
+        VBEGetVBEMode(pNv->pVbe, &pNv->vbeMode);
+        NVSave(pScrn);
+    } else if (function == MODE_RESTORE) {
+        NVRestore(pScrn);
+        VBESetVBEMode(pNv->pVbe, pNv->vbeMode, NULL);
+    }
 }
 
 #ifdef RANDR

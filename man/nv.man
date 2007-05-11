@@ -96,6 +96,11 @@ the wrong one, this option may be used to force usage of a particular output.
 The options are "0" or "1".
 Default: autodetected.
 .TP
+.BI "Option \*qDualhead\*q \*q" boolean \*q
+Enables simple VBE-based dual head mode.
+This sets the same resolution on both outputs and lays them out side-by-side.
+The screens will be panned together as one big metamode if the virtual desktop is larger than both screens combined.
+.TP
 .BI "Option \*qFlatPanel\*q \*q" boolean \*q
 The driver usually can autodetect the presence of a digital flat panel.  In
 the case that this fails, this option can be used to force the driver to 
