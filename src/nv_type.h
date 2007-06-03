@@ -133,6 +133,8 @@ typedef struct {
     void		(*PointerMoved)(int index, int x, int y);
     ScreenBlockHandlerProcPtr BlockHandler;
     CloseScreenProcPtr  CloseScreen;
+    xf86EnableDisableFBAccessProc *EnableDisableFBAccess;
+    Bool                accessEnabled;
     Bool                FBDev;
     int			Rotate;
     NVFBLayout		CurrentLayout;
@@ -174,6 +176,13 @@ typedef struct {
     Bool                WaitVSyncPossible;
     Bool                BlendingPossible;
     Bool                RandRRotation;
+
+    /* VBE dual-head */
+    Bool                VBEDualhead;
+    vbeInfoPtr          pVbe;
+    VbeInfoBlock       *pVbeInfo;
+    int                 vbeMode;
+    CARD32              vbeCRTC1Offset;
 } NVRec, *NVPtr;
 
 #define NVPTR(p) ((NVPtr)((p)->driverPrivate))

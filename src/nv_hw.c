@@ -948,7 +948,8 @@ void NVLoadStateExt (
     pNv->PTIMER[0x0100] = 0xFFFFFFFF;
 
     if(pNv->Architecture == NV_ARCH_04) {
-        pNv->PFB[0x0200/4] = state->config;
+        if (state)
+            pNv->PFB[0x0200/4] = state->config;
     } else 
     if((pNv->Architecture < NV_ARCH_40) ||
        ((pNv->Chipset & 0xfff0) == 0x0040))
@@ -1411,6 +1412,11 @@ void NVLoadStateExt (
     pNv->PFIFO[0x0495] = 0x00000001;
     pNv->PFIFO[0x0140] = 0x00000001;
 
+    if(!state) {
+        pNv->CurrentState = NULL;
+        return;
+    }
+
     if(pNv->Architecture >= NV_ARCH_10) {
         if(pNv->twoHeads) {
            pNv->PCRTC0[0x0860/4] = state->head;
@@ -1590,7 +1596,12 @@ void NVSetStartAddress (
     CARD32 start
 )
 {
-    pNv->PCRTC[0x800/4] = start;
+    if (pNv->VBEDualhead) {
+        pNv->PCRTC0[0x800/4] = start;
+        pNv->PCRTC0[0x2800/4] = start + pNv->vbeCRTC1Offset;
+    } else {
+        pNv->PCRTC[0x800/4] = start;
+    }
 }
 
 
