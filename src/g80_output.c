@@ -27,7 +27,6 @@
 #endif
 
 #include <strings.h>
-#include <xf86DDC.h>
 
 #include "g80_type.h"
 #include "g80_output.h"
