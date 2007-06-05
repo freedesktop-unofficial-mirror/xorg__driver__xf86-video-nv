@@ -129,12 +129,19 @@ static const xf86OutputFuncsRec G80SorOutputFuncs = {
 xf86OutputPtr
 G80CreateSor(ScrnInfoPtr pScrn, ORNum or)
 {
+    G80Ptr pNv = G80PTR(pScrn);
     G80OutputPrivPtr pPriv = xnfcalloc(sizeof(*pPriv), 1);
+    const int off = 0x800 * or;
     xf86OutputPtr output;
     char orName[5];
 
     if(!pPriv)
         return FALSE;
+
+    pNv->reg[(0x61C00C+off)/4] = 0x03010700;
+    pNv->reg[(0x61C010+off)/4] = 0x0000152f;
+    pNv->reg[(0x61C014+off)/4] = 0x00000000;
+    pNv->reg[(0x61C018+off)/4] = 0x00245af8;
 
     snprintf(orName, 5, "DVI%i", or);
     output = xf86OutputCreate(pScrn, &G80SorOutputFuncs, orName);

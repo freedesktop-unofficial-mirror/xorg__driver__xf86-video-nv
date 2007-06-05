@@ -11,5 +11,6 @@ void G80CrtcBlankScreen(xf86CrtcPtr, Bool blank);
 void G80CrtcEnableCursor(xf86CrtcPtr, Bool update);
 void G80CrtcDisableCursor(xf86CrtcPtr, Bool update);
 void G80CrtcSetCursorPosition(xf86CrtcPtr, int x, int y);
+void G80CrtcSkipModeFixup(xf86CrtcPtr);
 
 void G80DispCreateCrtcs(ScrnInfoPtr pScrn);
