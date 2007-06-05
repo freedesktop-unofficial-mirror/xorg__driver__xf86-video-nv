@@ -85,6 +85,7 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
                                    "for port %i\n",
                                    or, pNv->i2cMap[port].sor, port);
                     pNv->i2cMap[port].sor = or;
+                    pNv->i2cMap[port].panelType = (type == 2) ? TMDS : LVDS;
                     break;
             }
         }
@@ -317,7 +318,8 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
         if(pNv->i2cMap[i].dac != -1)
             dac = G80CreateDac(pScrn, pNv->i2cMap[i].dac);
         if(pNv->i2cMap[i].sor != -1)
-            sor = G80CreateSor(pScrn, pNv->i2cMap[i].sor);
+            sor = G80CreateSor(pScrn, pNv->i2cMap[i].sor,
+                               pNv->i2cMap[i].panelType);
 
         if(dac) {
             G80OutputPrivPtr pPriv = dac->driver_private;

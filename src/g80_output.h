@@ -1,6 +1,8 @@
 typedef struct G80OutputPrivRec {
     ORType type;
     ORNum or;
+    PanelType panelType;
+    DisplayModePtr nativeMode;
 
     xf86OutputPtr partner;
     I2CBusPtr i2c;
@@ -26,4 +28,4 @@ xf86OutputPtr G80CreateDac(ScrnInfoPtr, ORNum);
 Bool G80DacLoadDetect(xf86OutputPtr);
 
 /* g80_sor.c */
-xf86OutputPtr G80CreateSor(ScrnInfoPtr, ORNum);
+xf86OutputPtr G80CreateSor(ScrnInfoPtr, ORNum, PanelType);

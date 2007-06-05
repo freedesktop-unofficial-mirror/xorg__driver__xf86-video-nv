@@ -25,6 +25,11 @@ typedef enum ORNum {
    SOR1 = 1
 } ORNum;
 
+typedef enum PanelType {
+    TMDS,
+    LVDS,
+} PanelType;
+
 typedef enum AccelMethod {
     XAA,
     EXA,
@@ -41,8 +46,9 @@ typedef struct G80Rec {
     const unsigned char*table1;
     int                 offscreenHeight;
     struct {
-        ORNum dac;
-        ORNum sor;
+        ORNum           dac;
+        ORNum           sor;
+        PanelType       panelType;
     } i2cMap[4];
 
     xf86Int10InfoPtr    int10;
