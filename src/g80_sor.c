@@ -65,6 +65,30 @@ G80SorDPMSSet(xf86OutputPtr output, int mode)
     while((pNv->reg[(0x61C030+off)/4] & 0x10000000));
 }
 
+static int
+G80TMDSModeValid(xf86OutputPtr output, DisplayModePtr mode)
+{
+    // Disable dual-link modes until I can find a way to make them work
+    // reliably.
+    if (mode->Clock > 165000)
+        return MODE_CLOCK_HIGH;
+
+    return G80OutputModeValid(output, mode);
+}
+
+static int
+G80LVDSModeValid(xf86OutputPtr output, DisplayModePtr mode)
+{
+    G80OutputPrivPtr pPriv = output->driver_private;
+    DisplayModePtr native = pPriv->nativeMode;
+
+    // Ignore modes larger than the native res.
+    if (mode->HDisplay > native->HDisplay || mode->VDisplay > native->VDisplay)
+        return MODE_PANEL;
+
+    return G80OutputModeValid(output, mode);
+}
+
 static void
 G80SorModeSet(xf86OutputPtr output, DisplayModePtr mode,
               DisplayModePtr adjusted_mode)
@@ -180,7 +204,7 @@ static const xf86OutputFuncsRec G80SorTMDSOutputFuncs = {
     .dpms = G80SorDPMSSet,
     .save = NULL,
     .restore = NULL,
-    .mode_valid = G80OutputModeValid,
+    .mode_valid = G80TMDSModeValid,
     .mode_fixup = G80OutputModeFixup,
     .prepare = G80OutputPrepare,
     .commit = G80OutputCommit,
@@ -194,7 +218,7 @@ static const xf86OutputFuncsRec G80SorLVDSOutputFuncs = {
     .dpms = G80SorDPMSSet,
     .save = NULL,
     .restore = NULL,
-    .mode_valid = G80OutputModeValid,
+    .mode_valid = G80LVDSModeValid,
     .mode_fixup = G80SorModeFixupScale,
     .prepare = G80OutputPrepare,
     .commit = G80OutputCommit,

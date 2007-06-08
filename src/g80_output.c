@@ -164,8 +164,10 @@ G80OutputSetPClk(xf86OutputPtr output, int pclk)
 int
 G80OutputModeValid(xf86OutputPtr output, DisplayModePtr mode)
 {
-    if(mode->Clock > 400000 || mode->Clock < 25000)
-        return MODE_CLOCK_RANGE;
+    if(mode->Clock > 400000)
+        return MODE_CLOCK_HIGH;
+    if(mode->Clock < 25000)
+        return MODE_CLOCK_LOW;
 
     return MODE_OK;
 }
