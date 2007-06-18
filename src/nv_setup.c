@@ -687,6 +687,7 @@ NVCommonSetup(ScrnInfoPtr pScrn)
     if(pNv->FlatPanel && !pNv->Television) {
        pNv->fpWidth = pNv->PRAMDAC[0x0820/4] + 1;
        pNv->fpHeight = pNv->PRAMDAC[0x0800/4] + 1;
+       pNv->fpVTotal = pNv->PRAMDAC[0x804/4] + 1;
        pNv->fpSyncs = pNv->PRAMDAC[0x0848/4] & 0x30000033;
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Panel size is %i x %i\n",
                   pNv->fpWidth, pNv->fpHeight);
