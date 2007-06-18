@@ -70,6 +70,7 @@ typedef struct _riva_hw_state
     U032 timingV;
     U032 displayV;
     U032 crtcSync;
+    U032 crtcVSync;
 } RIVA_HW_STATE, *NVRegPtr;
 
 
@@ -161,6 +162,7 @@ typedef struct {
     Bool                fpScaler;
     int                 fpWidth;
     int                 fpHeight;
+    CARD32              fpVTotal;
     CARD32              fpSyncs;
     Bool                usePanelTweak;
     int                 PanelTweak;

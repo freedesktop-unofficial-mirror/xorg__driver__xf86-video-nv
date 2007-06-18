@@ -1,6 +1,6 @@
  /***************************************************************************\
 |*                                                                           *|
-|*       Copyright 2003 NVIDIA, Corporation.  All rights reserved.           *|
+|*       Copyright 2007 NVIDIA, Corporation.  All rights reserved.           *|
 |*                                                                           *|
 |*     NOTICE TO USER:   The source code  is copyrighted under  U.S. and     *|
 |*     international laws.  Users and possessors of this source code are     *|
@@ -221,6 +221,7 @@ NVDACInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        }
        nvReg->crtcSync = pNv->PRAMDAC[0x0828/4];
        nvReg->crtcSync += NVDACPanelTweaks(pNv, nvReg);
+       nvReg->crtcVSync = pNv->fpVTotal - 6;
     }
 
     nvReg->vpll = nvReg->pll;

@@ -1501,6 +1501,7 @@ void NVLoadStateExt (
     } else {
        pNv->PRAMDAC[0x0848/4] = state->scale;
        pNv->PRAMDAC[0x0828/4] = state->crtcSync;
+       pNv->PRAMDAC[0x0808/4] = state->crtcVSync;
     }
     pNv->PRAMDAC[0x0600/4] = state->general;
 
@@ -1588,6 +1589,7 @@ void NVUnloadStateExt
 
     if(pNv->FlatPanel) {
        state->crtcSync = pNv->PRAMDAC[0x0828/4];
+       state->crtcVSync = pNv->PRAMDAC[0x0808/4];
     }
 }
 
