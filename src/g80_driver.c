@@ -136,6 +136,7 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     const rgb zeros = {0, 0, 0};
     const Gamma gzeros = {0.0, 0.0, 0.0};
     CARD32 tmp;
+    memType BAR1sizeKB;
 
     if(flags & PROBE_DETECT) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
@@ -285,18 +286,35 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     pNv->architecture = pNv->reg[0] >> 20 & 0x1ff;
     pNv->RamAmountKBytes = pNv->RamAmountKBytes = (pNv->reg[0x0010020C/4] & 0xFFF00000) >> 10;
     pNv->videoRam = pNv->RamAmountKBytes;
-    /* Limit videoRam to the max BAR1 size of 256MB */
-    if(pNv->videoRam <= 1024) {
+
+    /* Determine the size of BAR1 */
+    /* Some configs have BAR1 < total RAM < 256 MB */
+    BAR1sizeKB = 1UL << (pPci->size[1] - 10);
+    if(BAR1sizeKB > 256 * 1024) {
+        xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "BAR1 is > 256 MB, which is "
+                   "probably wrong.  Clamping to 256 MB.\n");
+        BAR1sizeKB = 256 * 1024;
+    }
+
+    /* Limit videoRam to the size of BAR1 */
+    if(pNv->videoRam <= 1024 || BAR1sizeKB == 0) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "Failed to determine the amount of "
                    "available video memory\n");
         goto fail;
     }
     pNv->videoRam -= 1024;
-    if(pNv->videoRam > 256 * 1024)
-        pNv->videoRam = 256 * 1024;
+    if(pNv->videoRam > BAR1sizeKB)
+        pNv->videoRam = BAR1sizeKB;
+
     pScrn->videoRam = pNv->videoRam;
-    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Mapping %.1f of %.1f MB of video RAM\n",
-               pScrn->videoRam / 1024.0, pNv->RamAmountKBytes / 1024.0);
+
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Total video RAM: %.1f MB\n",
+               pNv->RamAmountKBytes / 1024.0);
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "      BAR1 size: %.1f MB\n",
+               BAR1sizeKB / 1024.0);
+    xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "  Mapped memory: %.1f MB\n",
+               pScrn->videoRam / 1024.0);
+
     pNv->mem = xf86MapPciMem(pScrn->scrnIndex,
                              VIDMEM_MMIO | VIDMEM_READSIDEEFFECT,
                              pcitag, pPci->memBase[1], pScrn->videoRam * 1024);
