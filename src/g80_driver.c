@@ -730,7 +730,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     ScrnInfoPtr pScrn;
     G80Ptr pNv;
     CARD32 pitch;
-    int visualMask;
+    int visualMask, i;
     BoxRec AvailFBArea;
 
     /* First get the ScrnInfoRec */
@@ -791,6 +791,9 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     AvailFBArea.x2 = pScrn->displayWidth;
     AvailFBArea.y2 = pNv->offscreenHeight;
     xf86InitFBManager(pScreen, &AvailFBArea);
+
+    for(i = 0; i < 8; i++)
+        pNv->reg[0x00001900/4 + i] = 0;
 
     if(!pNv->NoAccel) {
         G80InitHW(pScrn);
