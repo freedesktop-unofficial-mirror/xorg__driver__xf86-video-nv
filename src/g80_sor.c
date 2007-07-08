@@ -38,7 +38,7 @@ G80SorSetPClk(xf86OutputPtr output, int pclk)
     G80Ptr pNv = G80PTR(output->scrn);
     G80OutputPrivPtr pPriv = output->driver_private;
     const int orOff = 0x800 * pPriv->or;
-    const int limit = pPriv->panelType == LVDS ? 112000 : 165000;
+    const int limit = 165000;
 
     pNv->reg[(0x00614300+orOff)/4] = (pclk > limit) ? 0x101 : 0;
 }
@@ -284,7 +284,8 @@ G80CreateSor(ScrnInfoPtr pScrn, ORNum or, PanelType panelType)
     pPriv->or = or;
     pPriv->panelType = panelType;
     pPriv->cached_status = XF86OutputStatusUnknown;
-    pPriv->set_pclk = G80SorSetPClk;
+    if(panelType == TMDS)
+        pPriv->set_pclk = G80SorSetPClk;
     output->driver_private = pPriv;
     output->interlaceAllowed = TRUE;
     output->doubleScanAllowed = TRUE;

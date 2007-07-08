@@ -158,7 +158,8 @@ void
 G80OutputSetPClk(xf86OutputPtr output, int pclk)
 {
     G80OutputPrivPtr pPriv = output->driver_private;
-    pPriv->set_pclk(output, pclk);
+    if(pPriv->set_pclk)
+        pPriv->set_pclk(output, pclk);
 }
 
 int

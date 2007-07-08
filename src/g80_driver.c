@@ -829,6 +829,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     AvailFBArea.y2 = pNv->offscreenHeight;
     xf86InitFBManager(pScreen, &AvailFBArea);
 
+    pNv->reg[0x00001708/4] = 0;
     for(i = 0; i < 8; i++)
         pNv->reg[0x00001900/4 + i] = 0;
 
