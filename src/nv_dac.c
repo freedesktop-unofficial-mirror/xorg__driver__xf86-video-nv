@@ -118,7 +118,9 @@ NVDACInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
        vertBlankStart = vertStart;
        horizStart = horizTotal - 5;
        horizEnd = horizTotal - 2;   
-       horizBlankEnd = horizTotal + 4;    
+       horizBlankEnd = horizTotal + 4;
+       if(pNv->Architecture == NV_ARCH_30)
+           horizTotal += 2;
     }
 
     pVga->CRTC[0x0]  = Set8Bits(horizTotal);
