@@ -105,12 +105,14 @@ typedef enum {
     OPTION_HW_CURSOR,
     OPTION_NOACCEL,
     OPTION_ACCEL_METHOD,
+    OPTION_FP_DITHER,
 } G80Opts;
 
 static const OptionInfoRec G80Options[] = {
     { OPTION_HW_CURSOR,         "HWCursor",     OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_NOACCEL,           "NoAccel",      OPTV_BOOLEAN,   {0}, FALSE },
     { OPTION_ACCEL_METHOD,      "AccelMethod",  OPTV_STRING,    {0}, FALSE },
+    { OPTION_FP_DITHER,         "FPDither",     OPTV_BOOLEAN,   {0}, FALSE },
     { -1,                       NULL,           OPTV_NONE,      {0}, FALSE }
 };
 
@@ -312,6 +314,8 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
         "\"%s\".\n", s);
         goto fail;
     }
+
+    pNv->Dither = xf86ReturnOptValBool(pNv->Options, OPTION_FP_DITHER, FALSE);
 
     /* Set the bits per RGB for 8bpp mode */
     if(pScrn->depth == 8)

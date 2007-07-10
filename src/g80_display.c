@@ -41,6 +41,7 @@ typedef struct G80CrtcPrivRec {
     int pclk; /* Target pixel clock in kHz */
     Bool cursorVisible;
     Bool skipModeFixup;
+    Bool dither;
 } G80CrtcPrivRec, *G80CrtcPrivPtr;
 
 static void G80CrtcShowHideCursor(xf86CrtcPtr crtc, Bool show, Bool update);
@@ -362,6 +363,7 @@ G80CrtcModeSet(xf86CrtcPtr crtc, DisplayModePtr mode,
         case 16: C(0x00000870 + headOff, 0xE800); break;
         case 24: C(0x00000870 + headOff, 0xCF00); break;
     }
+    G80CrtcSetDither(crtc, pPriv->dither, FALSE);
     if((adjusted_mode->Flags & V_DBLSCAN) || (adjusted_mode->Flags & V_INTERLACE) ||
        adjusted_mode->CrtcHDisplay != HDisplay || adjusted_mode->CrtcVDisplay != VDisplay) {
         C(0x000008A4 + headOff, 9);
@@ -478,6 +480,19 @@ G80CrtcSkipModeFixup(xf86CrtcPtr crtc)
     pPriv->skipModeFixup = TRUE;
 }
 
+void
+G80CrtcSetDither(xf86CrtcPtr crtc, Bool dither, Bool update)
+{
+    ScrnInfoPtr pScrn = crtc->scrn;
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
+    const int headOff = 0x400 * G80CrtcGetHead(crtc);
+
+    pPriv->dither = dither;
+
+    C(0x000008A0 + headOff, dither ? 0x11 : 0);
+    if(update) C(0x00000080, 0);
+}
+
 static void
 G80CrtcCommit(xf86CrtcPtr crtc)
 {
@@ -524,6 +539,7 @@ static const xf86CrtcFuncsRec g80_crtc_funcs = {
 void
 G80DispCreateCrtcs(ScrnInfoPtr pScrn)
 {
+    G80Ptr pNv = G80PTR(pScrn);
     Head head;
     xf86CrtcPtr crtc;
     G80CrtcPrivPtr g80_crtc;
@@ -535,6 +551,7 @@ G80DispCreateCrtcs(ScrnInfoPtr pScrn)
 
         g80_crtc = xnfcalloc(sizeof(*g80_crtc), 1);
         g80_crtc->head = head;
+        g80_crtc->dither = pNv->Dither;
         crtc->driver_private = g80_crtc;
     }
 }

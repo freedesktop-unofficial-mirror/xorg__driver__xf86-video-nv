@@ -59,6 +59,7 @@ typedef struct G80Rec {
     Bool                HWCursor;
     Bool                NoAccel;
     AccelMethod         AccelMethod;
+    Bool                Dither;
 
     /* XAA */
     XAAInfoRecPtr       xaa;

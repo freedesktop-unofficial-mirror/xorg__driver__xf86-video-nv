@@ -27,6 +27,7 @@
 
 #define DPMS_SERVER
 #include <X11/extensions/dpms.h>
+#include <X11/Xatom.h>
 
 #include "g80_type.h"
 #include "g80_display.h"
@@ -200,6 +201,67 @@ G80SorGetLVDSModes(xf86OutputPtr output)
     return xf86DuplicateMode(pPriv->nativeMode);
 }
 
+#ifdef RANDR_12_INTERFACE
+#define MAKE_ATOM(a) MakeAtom((a), sizeof(a) - 1, TRUE);
+
+struct property {
+    Atom atom;
+    INT32 range[2];
+};
+
+static struct {
+    struct property dither;
+} properties;
+
+static void
+G80SorCreateResources(xf86OutputPtr output)
+{
+    ScrnInfoPtr pScrn = output->scrn;
+    G80Ptr pNv = G80PTR(pScrn);
+    int data, err;
+
+    properties.dither.atom = MAKE_ATOM("dither");
+    properties.dither.range[0] = 0;
+    properties.dither.range[1] = 1;
+    err = RRConfigureOutputProperty(output->randr_output,
+                                    properties.dither.atom, FALSE, TRUE, FALSE,
+                                    2, properties.dither.range);
+    if(err)
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "Failed to configure dithering property for %s: error %d\n",
+                   output->name, err);
+
+    // Set the default value
+    data = pNv->Dither;
+    err = RRChangeOutputProperty(output->randr_output, properties.dither.atom,
+                                 XA_INTEGER, 32, PropModeReplace, 1, &data,
+                                 FALSE, FALSE);
+    if(err)
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "Failed to set dithering property for %s: error %d\n",
+                   output->name, err);
+}
+
+static Bool
+G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
+{
+    if(prop == properties.dither.atom) {
+        INT32 i;
+
+        if(val->type != XA_INTEGER || val->format != 32 || val->size != 1)
+            return FALSE;
+
+        i = *(INT32*)val->data;
+        if(i < properties.dither.range[0] || i > properties.dither.range[1])
+            return FALSE;
+
+        G80CrtcSetDither(output->crtc, i, TRUE);
+    }
+
+    return TRUE;
+}
+#endif // RANDR_12_INTERFACE
+
 static const xf86OutputFuncsRec G80SorTMDSOutputFuncs = {
     .dpms = G80SorDPMSSet,
     .save = NULL,
@@ -211,6 +273,10 @@ static const xf86OutputFuncsRec G80SorTMDSOutputFuncs = {
     .mode_set = G80SorModeSet,
     .detect = G80SorDetect,
     .get_modes = G80OutputGetDDCModes,
+#ifdef RANDR_12_INTERFACE
+    .create_resources = G80SorCreateResources,
+    .set_property = G80SorSetProperty,
+#endif
     .destroy = G80SorDestroy,
 };
 
@@ -225,6 +291,10 @@ static const xf86OutputFuncsRec G80SorLVDSOutputFuncs = {
     .mode_set = G80SorModeSet,
     .detect = G80SorLVDSDetect,
     .get_modes = G80SorGetLVDSModes,
+#ifdef RANDR_12_INTERFACE
+    .create_resources = G80SorCreateResources,
+    .set_property = G80SorSetProperty,
+#endif
     .destroy = G80SorDestroy,
 };
 

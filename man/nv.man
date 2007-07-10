@@ -157,6 +157,11 @@ If you choose to use EXA, you might also consider setting
 .B Option \*qMigrationHeuristic\*q \*qgreedy\*q
 to improve performance.
 Default: XAA.
+.TP
+.BI "Option \*qFPDither\*q \*q" boolean \*q
+Enable or disable flat panel dithering by default.
+Dithering can also be enabled or disabled using the RandR 1.2 \*qdither\*q output property.
+Default: off.
 .\" ******************** end G80 section ********************
 .
 .SH "SEE ALSO"
