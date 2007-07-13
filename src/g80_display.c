@@ -42,6 +42,7 @@ typedef struct G80CrtcPrivRec {
     Bool cursorVisible;
     Bool skipModeFixup;
     Bool dither;
+    enum G80ScaleMode scale;
 } G80CrtcPrivRec, *G80CrtcPrivPtr;
 
 static void G80CrtcShowHideCursor(xf86CrtcPtr crtc, Bool show, Bool update);
@@ -364,18 +365,11 @@ G80CrtcModeSet(xf86CrtcPtr crtc, DisplayModePtr mode,
         case 24: C(0x00000870 + headOff, 0xCF00); break;
     }
     G80CrtcSetDither(crtc, pPriv->dither, FALSE);
-    if((adjusted_mode->Flags & V_DBLSCAN) || (adjusted_mode->Flags & V_INTERLACE) ||
-       adjusted_mode->CrtcHDisplay != HDisplay || adjusted_mode->CrtcVDisplay != VDisplay) {
-        C(0x000008A4 + headOff, 9);
-    } else {
-        C(0x000008A4 + headOff, 0);
-    }
+    G80CrtcSetScale(crtc, adjusted_mode, pPriv->scale, FALSE);
     C(0x000008A8 + headOff, 0x40000);
     C(0x000008C0 + headOff, y << 16 | x);
     C(0x000008C8 + headOff, VDisplay << 16 | HDisplay);
     C(0x000008D4 + headOff, 0);
-    C(0x000008D8 + headOff, adjusted_mode->CrtcVDisplay << 16 | adjusted_mode->CrtcHDisplay);
-    C(0x000008DC + headOff, adjusted_mode->CrtcVDisplay << 16 | adjusted_mode->CrtcHDisplay);
 
     G80CrtcBlankScreen(crtc, FALSE);
 }
@@ -493,6 +487,60 @@ G80CrtcSetDither(xf86CrtcPtr crtc, Bool dither, Bool update)
     if(update) C(0x00000080, 0);
 }
 
+static void ComputeAspectScale(DisplayModePtr mode, int *outX, int *outY)
+{
+    float scaleX, scaleY, scale;
+
+    scaleX = mode->CrtcHDisplay / (float)mode->HDisplay;
+    scaleY = mode->CrtcVDisplay / (float)mode->VDisplay;
+
+    if(scaleX > scaleY)
+        scale = scaleY;
+    else
+        scale = scaleX;
+
+    *outX = mode->HDisplay * scale;
+    *outY = mode->VDisplay * scale;
+}
+
+void G80CrtcSetScale(xf86CrtcPtr crtc, DisplayModePtr mode,
+                     enum G80ScaleMode scale, Bool update)
+{
+    ScrnInfoPtr pScrn = crtc->scrn;
+    G80CrtcPrivPtr pPriv = crtc->driver_private;
+    const int headOff = 0x400 * pPriv->head;
+    int outX, outY;
+
+    pPriv->scale = scale;
+
+    switch(scale) {
+        case G80_SCALE_ASPECT:
+            ComputeAspectScale(mode, &outX, &outY);
+            break;
+
+        case G80_SCALE_FILL:
+            outX = mode->CrtcHDisplay;
+            outY = mode->CrtcVDisplay;
+            break;
+
+        case G80_SCALE_CENTER:
+            outX = mode->HDisplay;
+            outY = mode->VDisplay;
+            break;
+    }
+
+    if((mode->Flags & V_DBLSCAN) || (mode->Flags & V_INTERLACE) ||
+       mode->HDisplay != outX || mode->VDisplay != outY) {
+        C(0x000008A4 + headOff, 9);
+    } else {
+        C(0x000008A4 + headOff, 0);
+    }
+    C(0x000008D8 + headOff, outY << 16 | outX);
+    C(0x000008DC + headOff, outY << 16 | outX);
+
+    if(update) C(0x00000080, 0);
+}
+
 static void
 G80CrtcCommit(xf86CrtcPtr crtc)
 {
@@ -552,6 +600,7 @@ G80DispCreateCrtcs(ScrnInfoPtr pScrn)
         g80_crtc = xnfcalloc(sizeof(*g80_crtc), 1);
         g80_crtc->head = head;
         g80_crtc->dither = pNv->Dither;
+        g80_crtc->scale = G80_SCALE_ASPECT;
         crtc->driver_private = g80_crtc;
     }
 }

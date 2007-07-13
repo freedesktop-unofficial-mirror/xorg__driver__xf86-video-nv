@@ -211,6 +211,7 @@ struct property {
 
 static struct {
     struct property dither;
+    struct property scale;
 } properties;
 
 static void
@@ -219,7 +220,9 @@ G80SorCreateResources(xf86OutputPtr output)
     ScrnInfoPtr pScrn = output->scrn;
     G80Ptr pNv = G80PTR(pScrn);
     int data, err;
+    const char *s;
 
+    /******** dithering ********/
     properties.dither.atom = MAKE_ATOM("dither");
     properties.dither.range[0] = 0;
     properties.dither.range[1] = 1;
@@ -240,6 +243,26 @@ G80SorCreateResources(xf86OutputPtr output)
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
                    "Failed to set dithering property for %s: error %d\n",
                    output->name, err);
+
+    /******** scaling ********/
+    properties.scale.atom = MAKE_ATOM("scale");
+    err = RRConfigureOutputProperty(output->randr_output,
+                                    properties.scale.atom, FALSE, FALSE,
+                                    FALSE, 0, NULL);
+    if(err)
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "Failed to configure scaling property for %s: error %d\n",
+                   output->name, err);
+
+    // Set the default value
+    s = "aspect";
+    err = RRChangeOutputProperty(output->randr_output, properties.scale.atom,
+                                 XA_STRING, 8, PropModeReplace, strlen(s),
+                                 (pointer)s, FALSE, FALSE);
+    if(err)
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "Failed to set scaling property for %s: error %d\n",
+                   output->name, err);
 }
 
 static Bool
@@ -256,9 +279,47 @@ G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
             return FALSE;
 
         G80CrtcSetDither(output->crtc, i, TRUE);
+        return TRUE;
+    } else if(prop == properties.scale.atom) {
+        const char *s;
+        enum G80ScaleMode scale;
+        DisplayModePtr mode;
+        int i;
+        const struct {
+            const char *name;
+            enum G80ScaleMode scale;
+        } modes[] = {
+            { "aspect", G80_SCALE_ASPECT },
+            { "fill",   G80_SCALE_FILL },
+            { "center", G80_SCALE_CENTER },
+            { NULL,     0 },
+        };
+
+        if(val->type != XA_STRING || val->format != 8)
+            return FALSE;
+        s = (char*)val->data;
+
+        for(i = 0; modes[i].name; i++) {
+            const char *name = modes[i].name;
+            const int len = strlen(name);
+
+            if(val->size == len && !strncmp(name, s, len)) {
+                scale = modes[i].scale;
+                break;
+            }
+        }
+        if(!modes[i].name)
+            return FALSE;
+
+        /* Need to construct an adjusted mode */
+        mode = xf86DuplicateMode(&output->crtc->mode);
+        output->funcs->mode_fixup(output, &output->crtc->mode, mode);
+        G80CrtcSetScale(output->crtc, mode, scale, TRUE);
+        xfree(mode);
+        return TRUE;
     }
 
-    return TRUE;
+    return FALSE;
 }
 #endif // RANDR_12_INTERFACE
 
