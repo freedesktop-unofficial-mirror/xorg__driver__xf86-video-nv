@@ -76,6 +76,13 @@ G80DacDPMSSet(xf86OutputPtr output, int mode)
     pNv->reg[(0x0061A004+off)/4] = tmp;
 }
 
+Bool
+G80DacModeFixup(xf86OutputPtr output, DisplayModePtr mode,
+                DisplayModePtr adjusted_mode)
+{
+    return TRUE;
+}
+
 static void
 G80DacModeSet(xf86OutputPtr output, DisplayModePtr mode,
               DisplayModePtr adjusted_mode)
@@ -99,6 +106,8 @@ G80DacModeSet(xf86OutputPtr output, DisplayModePtr mode,
     C(0x00000404 + dacOff,
         (adjusted_mode->Flags & V_NHSYNC) ? 1 : 0 |
         (adjusted_mode->Flags & V_NVSYNC) ? 2 : 0);
+
+    G80CrtcSetScale(output->crtc, adjusted_mode, G80_SCALE_OFF);
 }
 
 /*
@@ -165,7 +174,7 @@ static const xf86OutputFuncsRec G80DacOutputFuncs = {
     .save = NULL,
     .restore = NULL,
     .mode_valid = G80OutputModeValid,
-    .mode_fixup = G80OutputModeFixup,
+    .mode_fixup = G80DacModeFixup,
     .prepare = G80OutputPrepare,
     .commit = G80OutputCommit,
     .mode_set = G80DacModeSet,

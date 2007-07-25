@@ -29,6 +29,7 @@
 #include <strings.h>
 
 #include "g80_type.h"
+#include "g80_display.h"
 #include "g80_output.h"
 
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
@@ -171,13 +172,6 @@ G80OutputModeValid(xf86OutputPtr output, DisplayModePtr mode)
         return MODE_CLOCK_LOW;
 
     return MODE_OK;
-}
-
-Bool
-G80OutputModeFixup(xf86OutputPtr output, DisplayModePtr mode,
-                   DisplayModePtr adjusted_mode)
-{
-    return TRUE;
 }
 
 void
@@ -329,12 +323,14 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
 
             pPriv->partner = sor;
             pPriv->i2c = i2c;
+            pPriv->scale = G80_SCALE_OFF;
         }
         if(sor) {
             G80OutputPrivPtr pPriv = sor->driver_private;
 
             pPriv->partner = dac;
             pPriv->i2c = i2c;
+            pPriv->scale = G80_SCALE_ASPECT;
         }
     }
 

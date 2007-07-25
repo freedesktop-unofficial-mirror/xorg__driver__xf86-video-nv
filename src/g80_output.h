@@ -3,6 +3,7 @@ typedef struct G80OutputPrivRec {
     ORNum or;
     PanelType panelType;
     DisplayModePtr nativeMode;
+    enum G80ScaleMode scale;
 
     xf86OutputPtr partner;
     I2CBusPtr i2c;
@@ -14,7 +15,6 @@ typedef struct G80OutputPrivRec {
 
 void G80OutputSetPClk(xf86OutputPtr, int pclk);
 int G80OutputModeValid(xf86OutputPtr, DisplayModePtr);
-Bool G80OutputModeFixup(xf86OutputPtr, DisplayModePtr mode, DisplayModePtr adjusted_mode);
 void G80OutputPrepare(xf86OutputPtr);
 void G80OutputCommit(xf86OutputPtr);
 void G80OutputPartnersDetect(xf86OutputPtr dac, xf86OutputPtr sor, I2CBusPtr i2c);

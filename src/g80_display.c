@@ -42,7 +42,6 @@ typedef struct G80CrtcPrivRec {
     Bool cursorVisible;
     Bool skipModeFixup;
     Bool dither;
-    enum G80ScaleMode scale;
 } G80CrtcPrivRec, *G80CrtcPrivPtr;
 
 static void G80CrtcShowHideCursor(xf86CrtcPtr crtc, Bool show, Bool update);
@@ -307,31 +306,35 @@ G80DispShutdown(ScrnInfoPtr pScrn)
     while((pNv->reg[0x61C830/4] & 0x10000000));
 }
 
+void
+G80CrtcDoModeFixup(DisplayModePtr dst, const DisplayModePtr src)
+{
+    /* Magic mode timing fudge factor */
+    const int fudge = ((src->Flags & V_INTERLACE) && (src->Flags & V_DBLSCAN)) ? 2 : 1;
+    const int interlaceDiv = (src->Flags & V_INTERLACE) ? 2 : 1;
+
+    /* Stash the src timings in the Crtc fields in dst */
+    dst->CrtcHBlankStart = src->CrtcVTotal << 16 | src->CrtcHTotal;
+    dst->CrtcHSyncEnd = ((src->CrtcVSyncEnd - src->CrtcVSyncStart) / interlaceDiv - 1) << 16 |
+        (src->CrtcHSyncEnd - src->CrtcHSyncStart - 1);
+    dst->CrtcHBlankEnd = ((src->CrtcVBlankEnd - src->CrtcVSyncStart) / interlaceDiv - fudge) << 16 |
+        (src->CrtcHBlankEnd - src->CrtcHSyncStart - 1);
+    dst->CrtcHTotal = ((src->CrtcVTotal - src->CrtcVSyncStart + src->CrtcVBlankStart) / interlaceDiv - fudge) << 16 |
+        (src->CrtcHTotal - src->CrtcHSyncStart + src->CrtcHBlankStart - 1);
+    dst->CrtcHSkew = ((src->CrtcVTotal + src->CrtcVBlankEnd - src->CrtcVSyncStart) / 2 - 2) << 16 |
+        ((2*src->CrtcVTotal - src->CrtcVSyncStart + src->CrtcVBlankStart) / 2 - 2);
+}
+
 static Bool
 G80CrtcModeFixup(xf86CrtcPtr crtc,
                  DisplayModePtr mode, DisplayModePtr adjusted_mode)
 {
     G80CrtcPrivPtr pPriv = crtc->driver_private;
-    int interlaceDiv, fudge;
 
     if(pPriv->skipModeFixup)
         return TRUE;
 
-    /* Magic mode timing fudge factor */
-    fudge = ((adjusted_mode->Flags & V_INTERLACE) && (adjusted_mode->Flags & V_DBLSCAN)) ? 2 : 1;
-    interlaceDiv = (adjusted_mode->Flags & V_INTERLACE) ? 2 : 1;
-
-    /* Stash the mode timings in the Crtc fields in adjusted_mode */
-    adjusted_mode->CrtcHBlankStart = mode->CrtcVTotal << 16 | mode->CrtcHTotal;
-    adjusted_mode->CrtcHSyncEnd = ((mode->CrtcVSyncEnd - mode->CrtcVSyncStart) / interlaceDiv - 1) << 16 |
-        (mode->CrtcHSyncEnd - mode->CrtcHSyncStart - 1);
-    adjusted_mode->CrtcHBlankEnd = ((mode->CrtcVBlankEnd - mode->CrtcVSyncStart) / interlaceDiv - fudge) << 16 |
-        (mode->CrtcHBlankEnd - mode->CrtcHSyncStart - 1);
-    adjusted_mode->CrtcHTotal = ((mode->CrtcVTotal - mode->CrtcVSyncStart + mode->CrtcVBlankStart) / interlaceDiv - fudge) << 16 |
-        (mode->CrtcHTotal - mode->CrtcHSyncStart + mode->CrtcHBlankStart - 1);
-    adjusted_mode->CrtcHSkew = ((mode->CrtcVTotal + mode->CrtcVBlankEnd - mode->CrtcVSyncStart) / 2 - 2) << 16 |
-        ((2*mode->CrtcVTotal - mode->CrtcVSyncStart + mode->CrtcVBlankStart) / 2 - 2);
-
+    G80CrtcDoModeFixup(adjusted_mode, mode);
     return TRUE;
 }
 
@@ -365,7 +368,6 @@ G80CrtcModeSet(xf86CrtcPtr crtc, DisplayModePtr mode,
         case 24: C(0x00000870 + headOff, 0xCF00); break;
     }
     G80CrtcSetDither(crtc, pPriv->dither, FALSE);
-    G80CrtcSetScale(crtc, adjusted_mode, pPriv->scale, FALSE);
     C(0x000008A8 + headOff, 0x40000);
     C(0x000008C0 + headOff, y << 16 | x);
     C(0x000008C8 + headOff, VDisplay << 16 | HDisplay);
@@ -504,20 +506,19 @@ static void ComputeAspectScale(DisplayModePtr mode, int *outX, int *outY)
 }
 
 void G80CrtcSetScale(xf86CrtcPtr crtc, DisplayModePtr mode,
-                     enum G80ScaleMode scale, Bool update)
+                     enum G80ScaleMode scale)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
     G80CrtcPrivPtr pPriv = crtc->driver_private;
     const int headOff = 0x400 * pPriv->head;
     int outX, outY;
 
-    pPriv->scale = scale;
-
     switch(scale) {
         case G80_SCALE_ASPECT:
             ComputeAspectScale(mode, &outX, &outY);
             break;
 
+        case G80_SCALE_OFF:
         case G80_SCALE_FILL:
             outX = mode->CrtcHDisplay;
             outY = mode->CrtcVDisplay;
@@ -537,8 +538,6 @@ void G80CrtcSetScale(xf86CrtcPtr crtc, DisplayModePtr mode,
     }
     C(0x000008D8 + headOff, outY << 16 | outX);
     C(0x000008DC + headOff, outY << 16 | outX);
-
-    if(update) C(0x00000080, 0);
 }
 
 static void
@@ -600,7 +599,6 @@ G80DispCreateCrtcs(ScrnInfoPtr pScrn)
         g80_crtc = xnfcalloc(sizeof(*g80_crtc), 1);
         g80_crtc->head = head;
         g80_crtc->dither = pNv->Dither;
-        g80_crtc->scale = G80_SCALE_ASPECT;
         crtc->driver_private = g80_crtc;
     }
 }

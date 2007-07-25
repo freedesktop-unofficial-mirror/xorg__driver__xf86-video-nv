@@ -122,6 +122,8 @@ G80SorModeSet(xf86OutputPtr output, DisplayModePtr mode,
         type |
         ((adjusted_mode->Flags & V_NHSYNC) ? 0x1000 : 0) |
         ((adjusted_mode->Flags & V_NVSYNC) ? 0x2000 : 0));
+
+    G80CrtcSetScale(output->crtc, adjusted_mode, pPriv->scale);
 }
 
 static xf86OutputStatus
@@ -151,47 +153,88 @@ G80SorDestroy(xf86OutputPtr output)
 
     G80OutputDestroy(output);
 
-    if(pPriv->nativeMode) {
-        if(pPriv->nativeMode->name)
-            xfree(pPriv->nativeMode->name);
-        xfree(pPriv->nativeMode);
-    }
+    xf86DeleteMode(&pPriv->nativeMode, pPriv->nativeMode);
 
     xfree(output->driver_private);
     output->driver_private = NULL;
 }
 
-/******************** LVDS ********************/
+static void G80SorSetModeBackend(DisplayModePtr dst, const DisplayModePtr src)
+{
+    // Stash the backend mode timings from src into dst
+    dst->Clock           = src->Clock;
+    dst->Flags           = src->Flags;
+    dst->CrtcHDisplay    = src->CrtcHDisplay;
+    dst->CrtcHBlankStart = src->CrtcHBlankStart;
+    dst->CrtcHSyncStart  = src->CrtcHSyncStart;
+    dst->CrtcHSyncEnd    = src->CrtcHSyncEnd;
+    dst->CrtcHBlankEnd   = src->CrtcHBlankEnd;
+    dst->CrtcHTotal      = src->CrtcHTotal;
+    dst->CrtcHSkew       = src->CrtcHSkew;
+    dst->CrtcVDisplay    = src->CrtcVDisplay;
+    dst->CrtcVBlankStart = src->CrtcVBlankStart;
+    dst->CrtcVSyncStart  = src->CrtcVSyncStart;
+    dst->CrtcVSyncEnd    = src->CrtcVSyncEnd;
+    dst->CrtcVBlankEnd   = src->CrtcVBlankEnd;
+    dst->CrtcVTotal      = src->CrtcVTotal;
+    dst->CrtcHAdjusted   = src->CrtcHAdjusted;
+    dst->CrtcVAdjusted   = src->CrtcVAdjusted;
+}
+
 static Bool
-G80SorModeFixupScale(xf86OutputPtr output, DisplayModePtr mode,
-                     DisplayModePtr adjusted_mode)
+G80SorModeFixup(xf86OutputPtr output, DisplayModePtr mode,
+                DisplayModePtr adjusted_mode)
 {
     G80OutputPrivPtr pPriv = output->driver_private;
     DisplayModePtr native = pPriv->nativeMode;
 
-    // Stash the saved mode timings in adjusted_mode
-    adjusted_mode->Clock = native->Clock;
-    adjusted_mode->Flags = native->Flags;
-    adjusted_mode->CrtcHDisplay = native->CrtcHDisplay;
-    adjusted_mode->CrtcHBlankStart = native->CrtcHBlankStart;
-    adjusted_mode->CrtcHSyncStart = native->CrtcHSyncStart;
-    adjusted_mode->CrtcHSyncEnd = native->CrtcHSyncEnd;
-    adjusted_mode->CrtcHBlankEnd = native->CrtcHBlankEnd;
-    adjusted_mode->CrtcHTotal = native->CrtcHTotal;
-    adjusted_mode->CrtcHSkew = native->CrtcHSkew;
-    adjusted_mode->CrtcVDisplay = native->CrtcVDisplay;
-    adjusted_mode->CrtcVBlankStart = native->CrtcVBlankStart;
-    adjusted_mode->CrtcVSyncStart = native->CrtcVSyncStart;
-    adjusted_mode->CrtcVSyncEnd = native->CrtcVSyncEnd;
-    adjusted_mode->CrtcVBlankEnd = native->CrtcVBlankEnd;
-    adjusted_mode->CrtcVTotal = native->CrtcVTotal;
-    adjusted_mode->CrtcHAdjusted = native->CrtcHAdjusted;
-    adjusted_mode->CrtcVAdjusted = native->CrtcVAdjusted;
-
-    // This mode is already "fixed"
-    G80CrtcSkipModeFixup(output->crtc);
+    if(native && pPriv->scale != G80_SCALE_OFF) {
+        G80SorSetModeBackend(adjusted_mode, native);
+        // This mode is already "fixed"
+        G80CrtcSkipModeFixup(output->crtc);
+    }
 
     return TRUE;
+}
+
+static Bool
+G80SorTMDSModeFixup(xf86OutputPtr output, DisplayModePtr mode,
+                    DisplayModePtr adjusted_mode)
+{
+    int scrnIndex = output->scrn->scrnIndex;
+    G80OutputPrivPtr pPriv = output->driver_private;
+    DisplayModePtr modes = output->probed_modes;
+
+    xf86DeleteMode(&pPriv->nativeMode, pPriv->nativeMode);
+
+    if(modes) {
+        // Find the preferred mode and use that as the "native" mode.
+        // If no preferred mode is available, use the first one.
+        DisplayModePtr mode;
+
+        // Find the preferred mode.
+        for(mode = modes; mode; mode = mode->next) {
+            if(mode->type & M_T_PREFERRED) {
+                xf86DrvMsgVerb(scrnIndex, X_INFO, 5,
+                               "%s: preferred mode is %s\n",
+                               output->name, mode->name);
+                break;
+            }
+        }
+
+        // XXX: May not want to allow scaling if no preferred mode is found.
+        if(!mode) {
+            mode = modes;
+            xf86DrvMsgVerb(scrnIndex, X_INFO, 5,
+                    "%s: no preferred mode found, using %s\n",
+                    output->name, mode->name);
+        }
+
+        pPriv->nativeMode = xf86DuplicateMode(mode);
+        G80CrtcDoModeFixup(pPriv->nativeMode, mode);
+    }
+
+    return G80SorModeFixup(output, mode, adjusted_mode);
 }
 
 static DisplayModePtr
@@ -268,6 +311,8 @@ G80SorCreateResources(xf86OutputPtr output)
 static Bool
 G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
 {
+    G80OutputPrivPtr pPriv = output->driver_private;
+
     if(prop == properties.dither.atom) {
         INT32 i;
 
@@ -282,13 +327,13 @@ G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
         return TRUE;
     } else if(prop == properties.scale.atom) {
         const char *s;
-        enum G80ScaleMode scale;
-        DisplayModePtr mode;
+        enum G80ScaleMode oldScale, scale;
         int i;
         const struct {
             const char *name;
             enum G80ScaleMode scale;
         } modes[] = {
+            { "off",    G80_SCALE_OFF },
             { "aspect", G80_SCALE_ASPECT },
             { "fill",   G80_SCALE_FILL },
             { "center", G80_SCALE_CENTER },
@@ -310,12 +355,34 @@ G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
         }
         if(!modes[i].name)
             return FALSE;
+        if(scale == G80_SCALE_OFF && pPriv->panelType == LVDS)
+            // LVDS requires scaling
+            return FALSE;
 
-        /* Need to construct an adjusted mode */
-        mode = xf86DuplicateMode(&output->crtc->mode);
-        output->funcs->mode_fixup(output, &output->crtc->mode, mode);
-        G80CrtcSetScale(output->crtc, mode, scale, TRUE);
-        xfree(mode);
+        oldScale = pPriv->scale;
+        pPriv->scale = scale;
+        if(output->crtc) {
+            xf86CrtcPtr crtc = output->crtc;
+
+            if(!xf86CrtcSetMode(crtc, &crtc->desiredMode, crtc->desiredRotation,
+                                crtc->desiredX, crtc->desiredY)) {
+                xf86DrvMsg(crtc->scrn->scrnIndex, X_ERROR,
+                           "Failed to set scaling to %s for output %s\n",
+                           modes[i].name, output->name);
+
+                // Restore old scale and try again.
+                pPriv->scale = oldScale;
+                if(!xf86CrtcSetMode(crtc, &crtc->desiredMode,
+                                    crtc->desiredRotation, crtc->desiredX,
+                                    crtc->desiredY)) {
+                    xf86DrvMsg(crtc->scrn->scrnIndex, X_ERROR,
+                               "Failed to restore old scaling for output %s\n",
+                               output->name);
+                }
+
+                return FALSE;
+            }
+        }
         return TRUE;
     }
 
@@ -328,7 +395,7 @@ static const xf86OutputFuncsRec G80SorTMDSOutputFuncs = {
     .save = NULL,
     .restore = NULL,
     .mode_valid = G80TMDSModeValid,
-    .mode_fixup = G80OutputModeFixup,
+    .mode_fixup = G80SorTMDSModeFixup,
     .prepare = G80OutputPrepare,
     .commit = G80OutputCommit,
     .mode_set = G80SorModeSet,
@@ -346,7 +413,7 @@ static const xf86OutputFuncsRec G80SorLVDSOutputFuncs = {
     .save = NULL,
     .restore = NULL,
     .mode_valid = G80LVDSModeValid,
-    .mode_fixup = G80SorModeFixupScale,
+    .mode_fixup = G80SorModeFixup,
     .prepare = G80OutputPrepare,
     .commit = G80OutputCommit,
     .mode_set = G80SorModeSet,

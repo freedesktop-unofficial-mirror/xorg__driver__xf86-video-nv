@@ -175,8 +175,10 @@ Valid values:
 .B scale
 Control how the image is scaled to fit the flat panel.
 Note that some flat panels perform their own scaling, overriding this option.
+.RB \*q off \*q
+is not valid for laptop flat panels (LVDS).
 Valid values:
-.RB \*q aspect "\*q, \*q" fill "\*q, and \*q" center \*q.
+.RB \*q off "\*q, \*q" aspect "\*q, \*q" fill "\*q, and \*q" center \*q.
 Default:
 .RB \*q aspect \*q.
 .\" ******************** end G80 section ********************
