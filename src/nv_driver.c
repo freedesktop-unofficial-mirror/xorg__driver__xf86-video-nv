@@ -1,5 +1,3 @@
-/* $XdotOrg: driver/xf86-video-nv/src/nv_driver.c,v 1.21 2006/01/24 16:45:29 aplattner Exp $ */
-/* $XConsortium: nv_driver.c /main/3 1996/10/28 05:13:37 kaleb $ */
 /*
  * Copyright 1996-1997  David J. McKay
  *
@@ -28,8 +26,6 @@
 
 /* Hacked together from mga driver and 3.3.4 NVIDIA driver by Jarno Paananen
    <jpaana@s2.org> */
-
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/nv_driver.c,v 1.144 2006/06/16 00:19:32 mvojkovi Exp $ */
 
 #include "nv_include.h"
 
@@ -95,7 +91,7 @@ _X_EXPORT DriverRec NV = {
         0
 };
 
-/* Known cards as of 2006/06/16 */
+/* Known cards as of 2007/07/24 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -2520,4 +2516,4 @@ NVDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer data)
 
     return FALSE;
 }
-#endif
+#endif /* RANDR */

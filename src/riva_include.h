@@ -1,5 +1,3 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/riva_include.h $ */
-
 #ifndef __RIVA_INCLUDE_H__
 #define __RIVA_INCLUDE_H__
 

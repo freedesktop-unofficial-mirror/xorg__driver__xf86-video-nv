@@ -1,5 +1,3 @@
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/nv_video.c,v 1.23 2004/03/20 22:07:06 mvojkovi Exp $ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

@@ -23,8 +23,6 @@
 /* Hacked together from mga driver and 3.3.4 NVIDIA driver by Jarno Paananen
    <jpaana@s2.org> */
 
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/riva_driver.c,v 1.5 2003/11/03 05:11:26 tsi Exp $ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1342,4 +1340,3 @@ RivaSave(ScrnInfoPtr pScrn)
 
     (*pRiva->Save)(pScrn, vgaReg, rivaReg, pRiva->Primary);
 }
-
