@@ -37,8 +37,6 @@
 |*                                                                           *|
  \***************************************************************************/
 
-/* $XFree86: xc/programs/Xserver/hw/xfree86/drivers/nv/nv_dac.c,v 1.45 2005/07/09 00:53:00 mvojkovi Exp $ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -433,4 +431,3 @@ NVDACi2cInit(ScrnInfoPtr pScrn)
     }
     return TRUE;
 }
-
