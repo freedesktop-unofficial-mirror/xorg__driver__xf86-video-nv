@@ -18,5 +18,6 @@ install-sh
 libtool
 ltmain.sh
 missing
+release.sh
 stamp-h1
 ChangeLog
