@@ -48,8 +48,11 @@ typedef struct G80Rec {
     struct {
         ORNum           dac;
         ORNum           sor;
-        PanelType       panelType;
     } i2cMap[4];
+    struct {
+        Bool            present;
+        ORNum           or;
+    } lvds;
 
     xf86Int10InfoPtr    int10;
     int                 int10Mode; /* Console mode to restore */

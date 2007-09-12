@@ -66,10 +66,11 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
         port = (b >> 4) & 0xf;
         or = ffs((b >> 24) & 0xf) - 1;
 
-        if(type < 4 && port != 0xf) {
+        if(type == 0xe) break;
+
+        if(type < 4) {
             switch(type) {
                 case 0: /* CRT */
-                case 1: /* TV */
                     if(pNv->i2cMap[port].dac != -1) {
                         xf86DrvMsg(scrnIndex, X_WARNING,
                                    "DDC routing table corrupt!  DAC %i -> %i "
@@ -78,21 +79,30 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
                     }
                     pNv->i2cMap[port].dac = or;
                     break;
+                case 1: /* TV */
+                    /* Ignore TVs */
+                    break;
+
                 case 2: /* TMDS */
-                case 3: /* LVDS */
                     if(pNv->i2cMap[port].sor != -1)
                         xf86DrvMsg(scrnIndex, X_WARNING,
                                    "DDC routing table corrupt!  SOR %i -> %i "
                                    "for port %i\n",
                                    or, pNv->i2cMap[port].sor, port);
                     pNv->i2cMap[port].sor = or;
-                    pNv->i2cMap[port].panelType = (type == 2) ? TMDS : LVDS;
+                    break;
+
+                case 3: /* LVDS */
+                    pNv->lvds.present = TRUE;
+                    pNv->lvds.or = or;
                     break;
             }
         }
     }
 
-    xf86DrvMsg(scrnIndex, X_PROBED, "I2C map:\n");
+    xf86DrvMsg(scrnIndex, X_PROBED, "Connector map:\n");
+    if(pNv->lvds.present)
+        xf86DrvMsg(scrnIndex, X_PROBED, "  [N/A] -> SOR%i (LVDS)\n", pNv->lvds.or);
     for(i = 0; i < 4; i++) {
         if(pNv->i2cMap[i].dac != -1)
             xf86DrvMsg(scrnIndex, X_PROBED, "  Bus %i -> DAC%i\n", i, pNv->i2cMap[i].dac);
@@ -315,8 +325,7 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
         if(pNv->i2cMap[i].dac != -1)
             dac = G80CreateDac(pScrn, pNv->i2cMap[i].dac);
         if(pNv->i2cMap[i].sor != -1)
-            sor = G80CreateSor(pScrn, pNv->i2cMap[i].sor,
-                               pNv->i2cMap[i].panelType);
+            sor = G80CreateSor(pScrn, pNv->i2cMap[i].sor, TMDS);
 
         if(dac) {
             G80OutputPrivPtr pPriv = dac->driver_private;
@@ -332,6 +341,13 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
             pPriv->i2c = i2c;
             pPriv->scale = G80_SCALE_ASPECT;
         }
+    }
+
+    if(pNv->lvds.present) {
+        xf86OutputPtr lvds = G80CreateSor(pScrn, pNv->lvds.or, LVDS);
+        G80OutputPrivPtr pPriv = lvds->driver_private;
+
+        pPriv->scale = G80_SCALE_ASPECT;
     }
 
     /* For each output, set the crtc and clone masks */
