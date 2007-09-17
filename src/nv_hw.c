@@ -677,6 +677,16 @@ static void nForceUpdateArbitrationSettings (
     NVPtr        pNv
 )
 {
+#if XSERVER_LIBPCIACCESS
+    struct pci_device *const dev1 = pci_device_find_by_slot(0, 0, 0, 1);
+    struct pci_device *const dev2 = pci_device_find_by_slot(0, 0, 0, 2);
+    struct pci_device *const dev3 = pci_device_find_by_slot(0, 0, 0, 3);
+    struct pci_device *const dev5 = pci_device_find_by_slot(0, 0, 0, 5);
+    uint32_t tmp;
+    #define READ_LONG(num, offset) ({ pci_device_cfg_read_u32(dev##num, &tmp, (offset)); tmp; })
+#else
+    #define READ_LONG(num, offset) pciReadLong(pciTag(0, 0, num), (offset))
+#endif
     nv10_fifo_info fifo_data;
     nv10_sim_state sim_data;
     unsigned int M, N, P, pll, MClk, NVClk, memctrl;
@@ -684,11 +694,11 @@ static void nForceUpdateArbitrationSettings (
     if((pNv->Chipset & 0x0FF0) == 0x01A0) {
        unsigned int uMClkPostDiv;
 
-       uMClkPostDiv = (pciReadLong(pciTag(0, 0, 3), 0x6C) >> 8) & 0xf;
+       uMClkPostDiv = (READ_LONG(3, 0x6C) >> 8) & 0xf;
        if(!uMClkPostDiv) uMClkPostDiv = 4; 
        MClk = 400000 / uMClkPostDiv;
     } else {
-       MClk = pciReadLong(pciTag(0, 0, 5), 0x4C) / 1000;
+       MClk = READ_LONG(5, 0x4C) / 1000;
     }
 
     pll = pNv->PRAMDAC0[0x0500/4];
@@ -697,17 +707,17 @@ static void nForceUpdateArbitrationSettings (
     sim_data.pix_bpp        = (char)pixelDepth;
     sim_data.enable_video   = 0;
     sim_data.enable_mp      = 0;
-    sim_data.memory_type    = (pciReadLong(pciTag(0, 0, 1), 0x7C) >> 12) & 1;
+    sim_data.memory_type    = (READ_LONG(1, 0x7C) >> 12) & 1;
     sim_data.memory_width   = 64;
 
-    memctrl = pciReadLong(pciTag(0, 0, 3), 0x00) >> 16;
+    memctrl = READ_LONG(3, 0x00) >> 16;
 
     if((memctrl == 0x1A9) || (memctrl == 0x1AB) || (memctrl == 0x1ED)) {
         int dimm[3];
 
-        dimm[0] = (pciReadLong(pciTag(0, 0, 2), 0x40) >> 8) & 0x4F;
-        dimm[1] = (pciReadLong(pciTag(0, 0, 2), 0x44) >> 8) & 0x4F;
-        dimm[2] = (pciReadLong(pciTag(0, 0, 2), 0x48) >> 8) & 0x4F;
+        dimm[0] = (READ_LONG(2, 0x40) >> 8) & 0x4F;
+        dimm[1] = (READ_LONG(2, 0x44) >> 8) & 0x4F;
+        dimm[2] = (READ_LONG(2, 0x48) >> 8) & 0x4F;
 
         if((dimm[0] + dimm[1]) != dimm[2]) {
              ErrorF("WARNING: "
@@ -730,6 +740,8 @@ static void nForceUpdateArbitrationSettings (
         while (b >>= 1) (*burst)++;
         *lwm   = fifo_data.graphics_lwm >> 3;
     }
+
+#undef READ_LONG
 }
 
 

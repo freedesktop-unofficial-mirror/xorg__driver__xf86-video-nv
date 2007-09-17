@@ -42,7 +42,11 @@ Bool    G80GetScrnInfoRec(PciChipsets *chips, int chip);
 /* Mandatory functions */
 static const OptionInfoRec * NVAvailableOptions(int chipid, int busid);
 static void    NVIdentify(int flags);
+#if XSERVER_LIBPCIACCESS
+static Bool    NVPciProbe(DriverPtr, int entity, struct pci_device*, intptr_t data);
+#else
 static Bool    NVProbe(DriverPtr drv, int flags);
+#endif
 static Bool    NVPreInit(ScrnInfoPtr pScrn, int flags);
 static Bool    NVScreenInit(int Index, ScreenPtr pScreen, int argc,
                             char **argv);
@@ -72,6 +76,15 @@ static void	NVRestore(ScrnInfoPtr pScrn);
 static Bool	NVModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static Bool	NVSetModeVBE(ScrnInfoPtr pScrn, DisplayModePtr pMode);
 
+#if XSERVER_LIBPCIACCESS
+/* For now, just match any NVIDIA PCI device and sort through them in the probe
+ * routine */
+static const struct pci_id_match NVPciIdMatchList[] = {
+    { PCI_VENDOR_NVIDIA, PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY, 0, 0, 0 },
+    { PCI_VENDOR_NVIDIA_SGS, PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY, 0, 0, 0},
+    { 0, 0, 0 }
+};
+#endif
 
 /*
  * This contains the functions needed by the server after loading the
@@ -85,10 +98,19 @@ _X_EXPORT DriverRec NV = {
         NV_VERSION,
 	NV_DRIVER_NAME,
         NVIdentify,
+#if XSERVER_PCIACCESS
         NVProbe,
+#else
+        NULL,
+#endif
 	NVAvailableOptions,
         NULL,
-        0
+        0,
+        NULL,
+#if XSERVER_LIBPCIACCESS
+        NVPciIdMatchList,
+        NVPciProbe,
+#endif
 };
 
 /* Known cards as of 2007/07/24 */
@@ -574,7 +596,13 @@ nvSetup(pointer module, pointer opts, int *errmaj, int *errmin)
 
     if (!setupDone) {
         setupDone = TRUE;
-        xf86AddDriver(&NV, module, 0);
+        xf86AddDriver(&NV, module,
+#if XSERVER_LIBPCIACCESS
+            HaveDriverFuncs
+#else
+            0
+#endif
+        );
 
         /*
          * Modules that this driver always requires may be loaded here
@@ -637,7 +665,9 @@ NVGetScrnInfoRec(PciChipsets *chips, int chip)
     pScrn->driverName       = NV_DRIVER_NAME;
     pScrn->name             = NV_NAME;
 
+#if !XSERVER_LIBPCIACCESS
     pScrn->Probe            = NVProbe;
+#endif
     pScrn->PreInit          = NVPreInit;
     pScrn->ScreenInit       = NVScreenInit;
     pScrn->SwitchMode       = NVSwitchMode;
@@ -654,9 +684,29 @@ NVGetScrnInfoRec(PciChipsets *chips, int chip)
 
 
 static CARD32 
+#if XSERVER_LIBPCIACCESS
+NVGetPCIXpressChip (struct pci_device *dev)
+#else
 NVGetPCIXpressChip (pciVideoPtr pVideo)
+#endif
 {
     volatile CARD32 *regs;
+#if XSERVER_LIBPCIACCESS
+    uint32_t pciid, pcicmd;
+    void *tmp;
+
+    pci_device_cfg_read_u32(dev, &pcicmd, PCI_CMD_STAT_REG);
+    pci_device_cfg_write_u32(dev, pcicmd | PCI_CMD_MEM_ENABLE,
+                             PCI_CMD_STAT_REG);
+
+    pci_device_map_range(dev, dev->regions[0].base_addr, 0x2000,
+                         PCI_DEV_MAP_FLAG_WRITABLE, &tmp);
+    regs = tmp;
+    pciid = regs[0x1800/4];
+    pci_device_unmap_range(dev, tmp, 0x2000);
+
+    pci_device_cfg_write_u32(dev, pcicmd, PCI_CMD_STAT_REG);
+#else
     CARD32 pciid, pcicmd;
     PCITAG Tag = ((pciConfigPtr)(pVideo->thisCard))->tag;
 
@@ -670,6 +720,7 @@ NVGetPCIXpressChip (pciVideoPtr pVideo)
     xf86UnMapVidMem(-1, (pointer)regs, 0x2000);
 
     pciWriteLong(Tag, PCI_CMD_STAT_REG, pcicmd);
+#endif
 
     if((pciid & 0x0000ffff) == 0x000010DE) 
        pciid = 0x10DE0000 | (pciid >> 16);
@@ -694,7 +745,82 @@ NVIsG80(int chipType)
     return FALSE;
 }
 
+static Bool
+NVIsSupported(CARD32 id)
+{
+    /* look for a compatible devices which may be newer than
+       the NVKnownChipsets list above.  */
+    switch(id & 0xfff0) {
+    case 0x0170:
+    case 0x0180:
+    case 0x0250:
+    case 0x0280:
+    case 0x0300:
+    case 0x0310:
+    case 0x0320:
+    case 0x0330:
+    case 0x0340:
+    case 0x0040:
+    case 0x00C0:
+    case 0x0120:
+    case 0x0140:
+    case 0x0160:
+    case 0x01D0:
+    case 0x0090:
+    case 0x0210:
+    case 0x0220:
+    case 0x0240:
+    case 0x0290:
+    case 0x0390:
+    case 0x03D0:
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 /* Mandatory */
+#if XSERVER_LIBPCIACCESS
+static Bool
+NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
+{
+    const CARD32 id = ((dev->device_id & 0xfff0) == 0x00F0 ||
+                       (dev->device_id & 0xfff0) == 0x02E0) ?
+                      NVGetPCIXpressChip(dev) : dev->vendor_id << 16 | dev->device_id;
+    const char *name = xf86TokenToString(NVKnownChipsets, id);
+
+    if(dev->vendor_id == PCI_VENDOR_NVIDIA && !name &&
+       !NVIsSupported(id) && !NVIsG80(id)) {
+        /* See if pci.ids knows what the heck this thing is */
+        name = pci_device_get_device_name(dev);
+        if(name)
+            xf86DrvMsg(0, X_WARNING,
+                       NV_NAME ": Ignoring unsupported device 0x%x (%s) at %2.2x@%2.2x:%2.2x:%1.1x\n",
+                       id, name, dev->bus, dev->domain, dev->dev, dev->func);
+        else
+            xf86DrvMsg(0, X_WARNING,
+                       NV_NAME ": Ignoring unsupported device 0x%x at %2.2x@%2.2x:%2.2x:%1.1x\n",
+                       id, dev->bus, dev->domain, dev->dev, dev->func);
+        return FALSE;
+    }
+
+    if(!name)
+        name = pci_device_get_device_name(dev);
+    if(!name)
+        name = "Unknown GPU";
+
+    xf86DrvMsg(0, X_PROBED,
+               NV_NAME ": Found NVIDIA %s at %2.2x@%2.2x:%2.2x:%1.1x\n",
+               name, dev->bus, dev->domain, dev->dev, dev->func);
+
+    if(NVIsG80(dev->device_id))
+        return G80GetScrnInfoRec(NULL, entity);
+    else if(dev->vendor_id == PCI_VENDOR_NVIDIA_SGS)
+        return RivaGetScrnInfoRec(NULL, entity);
+    else
+        return NVGetScrnInfoRec(NULL, entity);
+}
+#else
 static Bool
 NVProbe(DriverPtr drv, int flags)
 {
@@ -738,57 +864,15 @@ NVProbe(DriverPtr drv, int flags)
                nvchips++;
             }
 
-            if(nvchips->name) { /* found one */
+            if(nvchips->name ||
+               ((*ppPci)->vendor == PCI_VENDOR_NVIDIA &&
+                (NVIsSupported(token) || NVIsG80((*ppPci)->chipType)))) {
                NVChipsets[numUsed].token = pciid;
-               NVChipsets[numUsed].name = nvchips->name;
-               NVPciChipsets[numUsed].numChipset = pciid; 
+               NVChipsets[numUsed].name = nvchips->name ? nvchips->name : "Unknown NVIDIA chip";
+               NVPciChipsets[numUsed].numChipset = pciid;
                NVPciChipsets[numUsed].PCIid = pciid;
                NVPciChipsets[numUsed].resList = RES_SHARED_VGA;
                numUsed++;
-            } else if ((*ppPci)->vendor == PCI_VENDOR_NVIDIA) {
-               Bool canHandle = FALSE;
-
-               /* look for a compatible devices which may be newer than 
-                  the NVKnownChipsets list above.  */
-               switch(token & 0xfff0) {
-               case 0x0170:   
-               case 0x0180:
-               case 0x0250:
-               case 0x0280:
-               case 0x0300:
-               case 0x0310:
-               case 0x0320:
-               case 0x0330:
-               case 0x0340:
-               case 0x0040:
-               case 0x00C0:
-               case 0x0120:
-               case 0x0140:
-               case 0x0160:
-               case 0x01D0:
-               case 0x0090:
-               case 0x0210:
-               case 0x0220:
-               case 0x0240:
-               case 0x0290:
-               case 0x0390:
-               case 0x03D0:
-                   canHandle = TRUE;
-                   break;
-               default:  break;  /* we don't recognize it */
-               }
-
-               if(NVIsG80((*ppPci)->chipType))
-                   canHandle = TRUE;
-
-               if(canHandle) {
-                   NVChipsets[numUsed].token = pciid;
-                   NVChipsets[numUsed].name = "Unknown NVIDIA chip";
-                   NVPciChipsets[numUsed].numChipset = pciid;
-                   NVPciChipsets[numUsed].PCIid = pciid;
-                   NVPciChipsets[numUsed].resList = RES_SHARED_VGA;
-                   numUsed++;
-               }
             }
         }
         ppPci++;
@@ -831,6 +915,7 @@ NVProbe(DriverPtr drv, int flags)
 
     return foundScreen;
 }
+#endif /* XSERVER_LIBPCIACCESS */
 
 /* Usually mandatory */
 Bool
@@ -1175,8 +1260,10 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
  
     /* Find the PCI info for this screen */
     pNv->PciInfo = xf86GetPciInfoForEntity(pNv->pEnt->index);
+#if !XSERVER_LIBPCIACCESS
     pNv->PciTag = pciTag(pNv->PciInfo->bus, pNv->PciInfo->device,
 			  pNv->PciInfo->func);
+#endif
 
     pNv->Primary = xf86IsPrimaryPci(pNv->PciInfo);
 
@@ -1212,7 +1299,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 		   pNv->Chipset);
     } else {
 	from = X_PROBED;
-	pNv->Chipset = (pNv->PciInfo->vendor << 16) | pNv->PciInfo->chipType;
+	pNv->Chipset = VENDOR_ID(pNv->PciInfo) << 16 | DEVICE_ID(pNv->PciInfo);
 
         if(((pNv->Chipset & 0xfff0) == 0x00F0) ||
            ((pNv->Chipset & 0xfff0) == 0x02E0))
@@ -1231,7 +1318,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ChipRev override: %d\n",
 		   pNv->ChipRev);
     } else {
-	pNv->ChipRev = pNv->PciInfo->chipRev;
+	pNv->ChipRev = CHIP_REVISION(pNv->PciInfo);
     }
 
     /*
@@ -1530,8 +1617,8 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	pNv->FbAddress = pNv->pEnt->device->MemBase;
 	from = X_CONFIG;
     } else {
-	if (pNv->PciInfo->memBase[1] != 0) {
-	    pNv->FbAddress = pNv->PciInfo->memBase[1] & 0xff800000;
+	if (MEMBASE(pNv->PciInfo, 1) != 0) {
+	    pNv->FbAddress = MEMBASE(pNv->PciInfo, 1) & 0xff800000;
 	    from = X_PROBED;
 	} else {
 	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
@@ -1557,8 +1644,8 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	pNv->IOAddress = pNv->pEnt->device->IOBase;
 	from = X_CONFIG;
     } else {
-	if (pNv->PciInfo->memBase[0] != 0) {
-	    pNv->IOAddress = pNv->PciInfo->memBase[0] & 0xffffc000;
+	if (MEMBASE(pNv->PciInfo, 0) != 0) {
+	    pNv->IOAddress = MEMBASE(pNv->PciInfo, 0) & 0xffffc000;
 	    from = X_PROBED;
 	} else {
 	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
@@ -1882,13 +1969,20 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 static Bool
 NVMapMem(ScrnInfoPtr pScrn)
 {
-    NVPtr pNv;
-        
-    pNv = NVPTR(pScrn);
+    NVPtr pNv = NVPTR(pScrn);
 
+#if XSERVER_LIBPCIACCESS
+    void *tmp;
+
+    pci_device_map_range(pNv->PciInfo, pNv->FbAddress, pNv->FbMapSize,
+                         PCI_DEV_MAP_FLAG_WRITABLE |
+                         PCI_DEV_MAP_FLAG_WRITE_COMBINE, &tmp);
+    pNv->FbBase = tmp;
+#else
     pNv->FbBase = xf86MapPciMem(pScrn->scrnIndex, VIDMEM_FRAMEBUFFER,
 				 pNv->PciTag, pNv->FbAddress,
 				 pNv->FbMapSize);
+#endif
     if (pNv->FbBase == NULL)
 	return FALSE;
 
@@ -1924,7 +2018,11 @@ NVUnmapMem(ScrnInfoPtr pScrn)
     
     pNv = NVPTR(pScrn);
 
+#if XSERVER_LIBPCIACCESS
+    pci_device_unmap_range(pNv->PciInfo, pNv->FbBase, pNv->FbMapSize);
+#else
     xf86UnMapVidMem(pScrn->scrnIndex, (pointer)pNv->FbBase, pNv->FbMapSize);
+#endif
     pNv->FbBase = NULL;
     pNv->FbStart = NULL;
 

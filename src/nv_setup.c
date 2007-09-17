@@ -298,6 +298,24 @@ static void nv10GetConfig (NVPtr pNv)
     }
 #endif
 
+#if XSERVER_LIBPCIACCESS
+    {
+    /* [AGP]: I don't know if this is correct */
+    struct pci_device *dev = pci_device_find_by_slot(0, 0, 0, 1);
+
+    if(implementation == 0x01a0) {
+        uint32_t amt;
+        pci_device_cfg_read_u32(dev, &amt, 0x7C);
+        pNv->RamAmountKBytes = (((amt >> 6) & 31) + 1) * 1024;
+    } else if(implementation == 0x01f0) {
+        uint32_t amt;
+        pci_device_cfg_read_u32(dev, &amt, 0x84);
+        pNv->RamAmountKBytes = (((amt >> 4) & 127) + 1) * 1024;
+    } else {
+        pNv->RamAmountKBytes = (pNv->PFB[0x020C/4] & 0xFFF00000) >> 10;
+    }
+    }
+#else
     if(implementation == 0x01a0) {
         int amt = pciReadLong(pciTag(0, 0, 1), 0x7C);
         pNv->RamAmountKBytes = (((amt >> 6) & 31) + 1) * 1024;
@@ -307,6 +325,7 @@ static void nv10GetConfig (NVPtr pNv)
     } else {
         pNv->RamAmountKBytes = (pNv->PFB[0x020C/4] & 0xFFF00000) >> 10;
     }
+#endif
 
     if(pNv->RamAmountKBytes > 256*1024)
         pNv->RamAmountKBytes = 256*1024;
@@ -337,6 +356,7 @@ NVCommonSetup(ScrnInfoPtr pScrn)
     Bool tvB = FALSE;
     int FlatPanel = -1;   /* really means the CRTC is slaved */
     Bool Television = FALSE;
+    void *tmp;
     
     /*
      * Override VGA I/O routines.
@@ -365,10 +385,15 @@ NVCommonSetup(ScrnInfoPtr pScrn)
      */
     pVga->MMIOBase   = (CARD8 *)pNv;
     pVga->MMIOOffset = 0;
-    
-    pNv->REGS = xf86MapPciMem(pScrn->scrnIndex, 
-                              VIDMEM_MMIO | VIDMEM_READSIDEEFFECT, 
-                              pNv->PciTag, pNv->IOAddress, 0x01000000);
+
+#if XSERVER_LIBPCIACCESS
+    pci_device_map_range(pNv->PciInfo, pNv->IOAddress, 0x01000000,
+                         PCI_DEV_MAP_FLAG_WRITABLE, &tmp);
+#else
+    tmp = xf86MapPciMem(pScrn->scrnIndex, VIDMEM_MMIO | VIDMEM_READSIDEEFFECT,
+                        pNv->PciTag, pNv->IOAddress, 0x01000000);
+#endif
+    pNv->REGS = tmp;
 
     pNv->PRAMIN   = pNv->REGS + (0x00710000/4);
     pNv->PCRTC0   = pNv->REGS + (0x00600000/4);
