@@ -362,8 +362,15 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE019E, "Quadro FX 4600" },
   { 0x10DE0400, "GeForce 8600 GTS" },
   { 0x10DE0402, "GeForce 8600 GT" },
+  { 0x10DE0404, "GeForce 8400 GS" },
   { 0x10DE0407, "GeForce 8600M GT" },
+  { 0x10DE0409, "GeForce 8700M GT" },
+  { 0x10DE040A, "Quadro FX 370" },
   { 0x10DE040B, "Quadro NVS 320M" },
+  { 0x10DE040C, "Quadro FX 570M" },
+  { 0x10DE040D, "Quadro FX 1600M" },
+  { 0x10DE040E, "Quadro FX 570" },
+  { 0x10DE040F, "Quadro FX 1700" },
   { 0x10DE0421, "GeForce 8500 GT" },
   { 0x10DE0422, "GeForce 8400 GS" },
   { 0x10DE0423, "GeForce 8300 GS" },
@@ -374,6 +381,8 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0429, "Quadro NVS 140M" },
   { 0x10DE042A, "Quadro NVS 130M" },
   { 0x10DE042B, "Quadro NVS 135M" },
+  { 0x10DE042D, "Quadro FX 360M" },
+  { 0x10DE042F, "Quadro NVS 290" },
 
   {-1, NULL}
 };
