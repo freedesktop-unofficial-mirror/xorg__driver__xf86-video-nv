@@ -514,6 +514,7 @@ void G80CrtcSetScale(xf86CrtcPtr crtc, DisplayModePtr mode,
     int outX, outY;
 
     switch(scale) {
+        default:
         case G80_SCALE_ASPECT:
             ComputeAspectScale(mode, &outX, &outY);
             break;
