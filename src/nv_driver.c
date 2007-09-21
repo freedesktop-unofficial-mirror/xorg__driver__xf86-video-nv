@@ -98,10 +98,10 @@ _X_EXPORT DriverRec NV = {
         NV_VERSION,
 	NV_DRIVER_NAME,
         NVIdentify,
-#if XSERVER_PCIACCESS
-        NVProbe,
-#else
+#if XSERVER_LIBPCIACCESS
         NULL,
+#else
+        NVProbe,
 #endif
 	NVAvailableOptions,
         NULL,
@@ -822,7 +822,7 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
                NV_NAME ": Found NVIDIA %s at %2.2x@%2.2x:%2.2x:%1.1x\n",
                name, dev->bus, dev->domain, dev->dev, dev->func);
 
-    if(NVIsG80(dev->device_id))
+    if(NVIsG80(id))
         return G80GetScrnInfoRec(NULL, entity);
     else if(dev->vendor_id == PCI_VENDOR_NVIDIA_SGS)
         return RivaGetScrnInfoRec(NULL, entity);

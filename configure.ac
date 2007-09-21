@@ -79,7 +79,7 @@ AC_CHECK_DECL(XSERVER_LIBPCIACCESS,
               [XSERVER_LIBPCIACCESS=yes],[XSERVER_LIBPCIACCESS=no],
               [#include "xorg-server.h"])
 if test "x$XSERVER_LIBPCIACCESS" = "xyes"; then
-    PKG_CHECK_MODULES(PCIACCES, [pciaccess >= 0.8.0])
+    PKG_CHECK_MODULES(PCIACCESS, [pciaccess >= 0.8.0])
 fi
 
 CFLAGS="$save_CFLAGS"
