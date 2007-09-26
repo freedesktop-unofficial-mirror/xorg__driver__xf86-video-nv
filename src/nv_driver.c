@@ -2184,8 +2184,17 @@ static void NVBacklightEnable(NVPtr pNv,  Bool on)
 #endif
     
     if(pNv->LVDS) {
-       if(pNv->twoHeads && ((pNv->Chipset & 0x0ff0) != 0x0110)) {
-           pNv->PMC[0x130C/4] = on ? 3 : 7; 
+       if(pNv->twoHeads) {
+           if((pNv->Chipset & 0x0ff0) != 0x0110) {
+               pNv->PMC[0x130C/4] = on ? 3 : 7;
+           } else if(SUBVENDOR_ID(pNv->PciInfo) == 0x1028 &&
+                     SUBDEVICE_ID(pNv->PciInfo) == 0xd4) {
+               // Dell Inspiron 8200, GeForce2 Go
+               CARD32 tmp_pcrt = pNv->PCRTC0[0x081C/4] & 0xFFFFFFFC;
+               if(on)
+                   tmp_pcrt |= 0x1;
+               pNv->PCRTC0[0x081C/4] = tmp_pcrt;
+           }
        }
     } else {
        CARD32 fpcontrol;
