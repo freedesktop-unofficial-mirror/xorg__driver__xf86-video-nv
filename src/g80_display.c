@@ -239,6 +239,7 @@ Bool
 G80DispInit(ScrnInfoPtr pScrn)
 {
     G80Ptr pNv = G80PTR(pScrn);
+    CARD32 val;
 
     pNv->reg[0x00610184/4] = pNv->reg[0x00614004/4];
     pNv->reg[0x00610190/4] = pNv->reg[0x00616100/4];
@@ -276,7 +277,15 @@ G80DispInit(ScrnInfoPtr pScrn)
     }
 
     pNv->reg[0x00610200/4] = 0x2b00;
-    while((pNv->reg[0x00610200/4] & 0x1e0000) != 0);
+    do {
+        val = pNv->reg[0x00610200/4];
+
+        if ((val & 0x9f0000) == 0x20000)
+            pNv->reg[0x00610200/4] = val | 0x800000;
+
+        if ((val & 0x3f0000) == 0x30000)
+            pNv->reg[0x00610200/4] = val | 0x200000;
+    } while ((val & 0x1e0000) != 0);
     pNv->reg[0x00610300/4] = 1;
     pNv->reg[0x00610200/4] = 0x1000b03;
     while(!(pNv->reg[0x00610200/4] & 0x40000000));
