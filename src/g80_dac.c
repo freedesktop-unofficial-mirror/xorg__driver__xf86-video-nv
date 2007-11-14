@@ -29,6 +29,7 @@
 
 #define DPMS_SERVER
 #include <X11/extensions/dpms.h>
+#include <xf86_OSproc.h>
 
 #include "g80_type.h"
 #include "g80_display.h"
@@ -134,6 +135,7 @@ G80DacLoadDetect(xf86OutputPtr output)
     G80OutputPrivPtr pPriv = output->driver_private;
     const int scrnIndex = pScrn->scrnIndex;
     const int dacOff = 2048 * pPriv->or;
+    int sigstate;
     CARD32 load, tmp, tmp2;
 
     xf86DrvMsg(scrnIndex, X_PROBED, "Trying load detection on VGA%i ... ",
@@ -145,7 +147,9 @@ G80DacLoadDetect(xf86OutputPtr output)
     while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
     tmp = pNv->architecture == 0x50 ? 420 : 340;
     pNv->reg[(0x0061A00C+dacOff)/4] = tmp | 0x100000;
-    usleep(4500);
+    sigstate = xf86BlockSIGIO();
+    usleep(45000);
+    xf86UnblockSIGIO(sigstate);
     load = pNv->reg[(0x0061A00C+dacOff)/4];
     pNv->reg[(0x0061A00C+dacOff)/4] = 0;
     pNv->reg[(0x0061A004+dacOff)/4] = 0x80000000 | tmp2;
