@@ -2134,8 +2134,10 @@ NVRestore(ScrnInfoPtr pScrn)
     NVPtr pNv = NVPTR(pScrn);
     NVRegPtr nvReg = &pNv->SavedReg;
 
-    if(pNv->HWCursor)
+    if(pNv->HWCursor) {
         NVShowHideCursor(pNv, 0);
+        sleep(1);
+    }
     NVLockUnlock(pNv, 0);
 
     if(pNv->twoHeads) {
