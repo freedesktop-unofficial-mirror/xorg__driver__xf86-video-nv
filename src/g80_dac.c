@@ -195,7 +195,7 @@ G80CreateDac(ScrnInfoPtr pScrn, ORNum or)
     char orName[5];
 
     if(!pPriv)
-        return FALSE;
+        return NULL;
 
     snprintf(orName, 5, "VGA%i", or);
     output = xf86OutputCreate(pScrn, &G80DacOutputFuncs, orName);
