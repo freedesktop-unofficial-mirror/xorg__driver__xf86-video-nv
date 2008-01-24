@@ -56,6 +56,7 @@ typedef struct G80Rec {
         Bool            present;
         ORNum           or;
     } lvds;
+    CARD32              loadVal;
 
     xf86Int10InfoPtr    int10;
     int                 int10Mode; /* Console mode to restore */

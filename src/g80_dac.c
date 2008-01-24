@@ -136,23 +136,22 @@ G80DacLoadDetect(xf86OutputPtr output)
     const int scrnIndex = pScrn->scrnIndex;
     const int dacOff = 2048 * pPriv->or;
     int sigstate;
-    CARD32 load, tmp, tmp2;
+    CARD32 load, tmp;
 
     xf86DrvMsg(scrnIndex, X_PROBED, "Trying load detection on VGA%i ... ",
             pPriv->or);
 
     pNv->reg[(0x0061A010+dacOff)/4] = 0x00000001;
-    tmp2 = pNv->reg[(0x0061A004+dacOff)/4];
+    tmp = pNv->reg[(0x0061A004+dacOff)/4];
     pNv->reg[(0x0061A004+dacOff)/4] = 0x80150000;
     while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
-    tmp = pNv->architecture == 0x50 ? 420 : 340;
-    pNv->reg[(0x0061A00C+dacOff)/4] = tmp | 0x100000;
+    pNv->reg[(0x0061A00C+dacOff)/4] = pNv->loadVal | 0x100000;
     sigstate = xf86BlockSIGIO();
     usleep(45000);
     xf86UnblockSIGIO(sigstate);
     load = pNv->reg[(0x0061A00C+dacOff)/4];
     pNv->reg[(0x0061A00C+dacOff)/4] = 0;
-    pNv->reg[(0x0061A004+dacOff)/4] = 0x80000000 | tmp2;
+    pNv->reg[(0x0061A004+dacOff)/4] = 0x80000000 | tmp;
 
     // Use this DAC if all three channels show load.
     if((load & 0x38000000) == 0x38000000) {
