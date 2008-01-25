@@ -91,7 +91,7 @@ _X_EXPORT DriverRec NV = {
         0
 };
 
-/* Known cards as of 2007/07/24 */
+/* Known cards as of 2008/01/24 */
 
 static SymTabRec NVKnownChipsets[] =
 {
