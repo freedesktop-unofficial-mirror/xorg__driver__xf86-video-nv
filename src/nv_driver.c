@@ -361,6 +361,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE042B, "Quadro NVS 135M" },
   { 0x10DE042D, "Quadro FX 360M" },
   { 0x10DE042F, "Quadro NVS 290" },
+  { 0x10DE0611, "GeForce 8800 GT" },
 #endif
 
   {-1, NULL}
@@ -699,6 +700,7 @@ NVIsG80(int chipType)
         case 0x0190:
         case 0x0400:
         case 0x0420:
+        case 0x0610:
             return TRUE;
     }
 
