@@ -34,6 +34,41 @@
 
 #include <xf86DDC.h>
 
+static CARD32 G80FindLoadVal(const unsigned char *table1)
+{
+    const unsigned char *p = table1;
+    int count;
+    const CARD32 def = 340;
+
+    for(p = table1; *(CARD16*)p != 0xb8ff && p < table1 + 64000; p += 2);
+    if(p == table1 + 64000)
+        return def;
+    p += 2;
+    if(*(CARD32*)p != 0x544942)
+        return def;
+    p += 4;
+    if(*(CARD16*)p != 0x100)
+        return def;
+    p += 2;
+    if(*p != 12)
+        return def;
+    p++;
+    if(*p != 6)
+        return def;
+    p++;
+    count = *p;
+    p += 2;
+    for(; *p != 'A' && count >= 0; count--, p += 6);
+    if(count == -1)
+        return def;
+    p += 4;
+    p = table1 + *(CARD16*)p;
+    p = table1 + *(CARD16*)p;
+    if(p[0] != 0x10 || p[1] != 4 || p[2] != 4 || p[3] != 2)
+        return def;
+    return *(CARD32*)(p + 4) & 0x3ff;
+}
+
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
 {
     unsigned char *table2;
@@ -100,6 +135,9 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
         if(pNv->i2cMap[i].sor != -1)
             xf86DrvMsg(scrnIndex, X_PROBED, "  Bus %i -> SOR%i\n", i, pNv->i2cMap[i].sor);
     }
+
+    pNv->loadVal = G80FindLoadVal(pNv->table1);
+    xf86DrvMsg(scrnIndex, X_PROBED, "Load detection: %d\n", pNv->loadVal);
 
     return TRUE;
 
