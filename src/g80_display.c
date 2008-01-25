@@ -36,6 +36,7 @@
 
 #define DPMS_SERVER
 #include <X11/extensions/dpms.h>
+#include <xf86_OSproc.h>
 
 /*
  * PLL calculation.  pclk is in kHz.
@@ -193,6 +194,7 @@ Bool G80DispDetectLoad(ScrnInfoPtr pScrn, ORNum or)
 {
     G80Ptr pNv = G80PTR(pScrn);
     const int dacOff = 2048 * or;
+    int sigstate;
     CARD32 load, tmp;
 
     pNv->reg[(0x0061A010+dacOff)/4] = 0x00000001;
@@ -200,7 +202,9 @@ Bool G80DispDetectLoad(ScrnInfoPtr pScrn, ORNum or)
     while(pNv->reg[(0x0061A004+dacOff)/4] & 0x80000000);
     tmp = pNv->architecture == 0x50 ? 420 : 340;
     pNv->reg[(0x0061A00C+dacOff)/4] = tmp | 0x100000;
-    usleep(4500);
+    sigstate = xf86BlockSIGIO();
+    usleep(45000);
+    xf86UnblockSIGIO(sigstate);
     load = pNv->reg[(0x0061A00C+dacOff)/4];
     pNv->reg[(0x0061A00C+dacOff)/4] = 0;
     pNv->reg[(0x0061A004+dacOff)/4] = 0x80550000;
