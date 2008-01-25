@@ -27,11 +27,12 @@
 #endif
 
 #include <strings.h>
-#include <xf86DDC.h>
 
 #include "g80_type.h"
 #include "g80_ddc.h"
 #include "g80_display.h"
+
+#include <xf86DDC.h>
 
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
 {
