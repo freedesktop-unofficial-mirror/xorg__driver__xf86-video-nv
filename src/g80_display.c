@@ -223,7 +223,7 @@ Bool G80LoadDetect(ScrnInfoPtr pScrn)
 
     pNv->orType = DAC;
 
-    for(or = DAC0; or <= DAC2; or++) {
+    for(or = DAC1; or <= DAC2; or++) {
         xf86DrvMsg(scrnIndex, X_PROBED, "Trying load detection on DAC%i ... ", or);
 
         if(G80DispDetectLoad(pScrn, or)) {
