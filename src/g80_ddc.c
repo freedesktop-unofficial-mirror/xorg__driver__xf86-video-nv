@@ -34,7 +34,7 @@
 
 #include <xf86DDC.h>
 
-static CARD32 G80FindLoadVal(const unsigned char *table1)
+static unsigned G80FindLoadVal(const unsigned char *table1)
 {
     const unsigned char *p = table1;
     int count;
