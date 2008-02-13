@@ -324,7 +324,6 @@ G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
             return FALSE;
 
         G80CrtcSetDither(output->crtc, i, TRUE);
-        return TRUE;
     } else if(prop == properties.scale.atom) {
         const char *s;
         enum G80ScaleMode oldScale, scale;
@@ -383,10 +382,9 @@ G80SorSetProperty(xf86OutputPtr output, Atom prop, RRPropertyValuePtr val)
                 return FALSE;
             }
         }
-        return TRUE;
     }
 
-    return FALSE;
+    return TRUE;
 }
 #endif // RANDR_12_INTERFACE
 
