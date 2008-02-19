@@ -41,7 +41,7 @@ G80SorSetPClk(xf86OutputPtr output, int pclk)
     const int orOff = 0x800 * pPriv->or;
     const int limit = 165000;
 
-    pNv->reg[(0x00614300+orOff)/4] = (pclk > limit) ? 0x101 : 0;
+    pNv->reg[(0x00614300+orOff)/4] = 0x70000 | (pclk > limit ? 0x101 : 0);
 }
 
 static void

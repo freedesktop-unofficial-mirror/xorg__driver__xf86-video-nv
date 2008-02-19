@@ -69,8 +69,8 @@ static unsigned G80FindLoadVal(const unsigned char *table1)
 
 static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
 {
-    unsigned char *table2;
-    unsigned char headerSize, entries;
+    unsigned char *table2, *table3;
+    unsigned char headerSize, entries, table3Entries, table3EntSize;
     int i;
     CARD16 a;
     CARD32 b;
@@ -89,11 +89,16 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
     b = *(CARD32*)(table2 + 6);
     if(b != 0x4edcbdcb) goto fail;
 
+    table3 = (unsigned char*)pNv->table1 + *(CARD16*)(table2 + 4);
+    table3Entries = table3[2];
+    table3EntSize = table3[3];
+    table3 += table3[1];
+
     headerSize = table2[1];
     entries = table2[2];
 
     for(i = 0; i < entries; i++) {
-        int type, port;
+        int type, port, portType;
         ORNum or;
 
         b = *(CARD32*)&table2[headerSize + 8*i];
@@ -103,35 +108,60 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
 
         if(type == 0xe) break;
 
-        if(type < 4) {
-            switch(type) {
-                case 0: /* CRT */
-                    if(pNv->i2cMap[port].dac != -1) {
-                        xf86DrvMsg(scrnIndex, X_WARNING,
-                                   "DDC routing table corrupt!  DAC %i -> %i "
-                                   "for port %i\n",
-                                   or, pNv->i2cMap[port].dac, port);
-                    }
-                    pNv->i2cMap[port].dac = or;
+        switch(type) {
+            case 0: /* CRT */
+                if(port >= table3Entries) {
+                    xf86DrvMsg(scrnIndex, X_WARNING,
+                               "VGA%d: invalid port %d\n", or, port);
                     break;
-                case 1: /* TV */
-                    /* Ignore TVs */
+                }
+                b = *(CARD32*)&table3[table3EntSize * port];
+                port = b & 0xff;
+                portType = b >> 24;
+                if(portType != 5) {
+                    xf86DrvMsg(scrnIndex, X_WARNING,
+                               "VGA%d: invalid port type %d\n", or, portType);
                     break;
+                }
+                if(pNv->i2cMap[port].dac != -1) {
+                    xf86DrvMsg(scrnIndex, X_WARNING,
+                               "DDC routing table corrupt!  DAC %i -> %i for "
+                               "port %i\n", or, pNv->i2cMap[port].dac, port);
+                }
+                pNv->i2cMap[port].dac = or;
+                break;
+            case 1: /* TV */
+                /* Ignore TVs */
+                break;
 
-                case 2: /* TMDS */
-                    if(pNv->i2cMap[port].sor != -1)
-                        xf86DrvMsg(scrnIndex, X_WARNING,
-                                   "DDC routing table corrupt!  SOR %i -> %i "
-                                   "for port %i\n",
-                                   or, pNv->i2cMap[port].sor, port);
-                    pNv->i2cMap[port].sor = or;
+            case 2: /* TMDS */
+                if(port >= table3Entries) {
+                    xf86DrvMsg(scrnIndex, X_WARNING,
+                               "DVI%d: invalid port %d\n", or, port);
                     break;
+                }
+                b = *(CARD32*)&table3[table3EntSize * port];
+                port = b & 0xff;
+                portType = b >> 24;
+                if(portType != 5) {
+                    xf86DrvMsg(scrnIndex, X_WARNING,
+                               "DVI%d: invalid port type %d\n", or, portType);
+                    break;
+                }
+                if(pNv->i2cMap[port].sor != -1)
+                    xf86DrvMsg(scrnIndex, X_WARNING,
+                               "DDC routing table corrupt!  SOR %i -> %i for "
+                               "port %i\n", or, pNv->i2cMap[port].sor, port);
+                pNv->i2cMap[port].sor = or;
+                break;
 
-                case 3: /* LVDS */
-                    pNv->lvds.present = TRUE;
-                    pNv->lvds.or = or;
-                    break;
-            }
+            case 3: /* LVDS */
+                pNv->lvds.present = TRUE;
+                pNv->lvds.or = or;
+                break;
+
+            default:
+                break;
         }
     }
 
