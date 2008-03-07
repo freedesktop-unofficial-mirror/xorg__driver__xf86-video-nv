@@ -77,7 +77,7 @@ G80DacDPMSSet(xf86OutputPtr output, int mode)
     pNv->reg[(0x0061A004+off)/4] = tmp;
 }
 
-Bool
+static Bool
 G80DacModeFixup(xf86OutputPtr output, DisplayModePtr mode,
                 DisplayModePtr adjusted_mode)
 {

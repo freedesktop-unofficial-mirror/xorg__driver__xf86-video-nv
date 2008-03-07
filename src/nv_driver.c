@@ -952,7 +952,7 @@ NVSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
     return NVModeInit(pScrn, mode);
 }
 
-Bool
+static Bool
 NVSwitchModeVBE(int scrnIndex, DisplayModePtr mode, int flags)
 {
     ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
@@ -1232,7 +1232,7 @@ NVModesAdd(DisplayModePtr Modes, DisplayModePtr Additions)
 }
 
 /* Mandatory */
-Bool
+static Bool
 NVPreInit(ScrnInfoPtr pScrn, int flags)
 {
     NVPtr pNv;
@@ -2016,7 +2016,7 @@ NVMapMem(ScrnInfoPtr pScrn)
     return TRUE;
 }
 
-Bool
+static Bool
 NVMapMemFBDev(ScrnInfoPtr pScrn)
 {
     NVPtr pNv;

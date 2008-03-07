@@ -423,7 +423,7 @@ G80CrtcBlankScreen(xf86CrtcPtr crtc, Bool blank)
     }
 }
 
-void
+static void
 G80CrtcDPMSSet(xf86CrtcPtr crtc, int mode)
 {
 }
@@ -442,12 +442,12 @@ static void G80CrtcShowHideCursor(xf86CrtcPtr crtc, Bool show, Bool update)
     }
 }
 
-void G80CrtcShowCursor(xf86CrtcPtr crtc)
+static void G80CrtcShowCursor(xf86CrtcPtr crtc)
 {
     G80CrtcShowHideCursor(crtc, TRUE, TRUE);
 }
 
-void G80CrtcHideCursor(xf86CrtcPtr crtc)
+static void G80CrtcHideCursor(xf86CrtcPtr crtc)
 {
     G80CrtcShowHideCursor(crtc, FALSE, TRUE);
 }
