@@ -776,26 +776,26 @@ NVIsSupported(CARD32 id)
     /* look for a compatible devices which may be newer than
        the NVKnownChipsets list above.  */
     switch(id & 0xfff0) {
+    case 0x0040:
+    case 0x0090:
+    case 0x00C0:
+    case 0x0120:
+    case 0x0140:
+    case 0x0160:
     case 0x0170:
     case 0x0180:
+    case 0x01D0:
+    case 0x0210:
+    case 0x0220:
+    case 0x0240:
     case 0x0250:
     case 0x0280:
+    case 0x0290:
     case 0x0300:
     case 0x0310:
     case 0x0320:
     case 0x0330:
     case 0x0340:
-    case 0x0040:
-    case 0x00C0:
-    case 0x0120:
-    case 0x0140:
-    case 0x0160:
-    case 0x01D0:
-    case 0x0090:
-    case 0x0210:
-    case 0x0220:
-    case 0x0240:
-    case 0x0290:
     case 0x0390:
     case 0x03D0:
         return TRUE;
