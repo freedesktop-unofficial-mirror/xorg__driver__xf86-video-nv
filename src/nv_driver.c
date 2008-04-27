@@ -364,6 +364,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0401, "GeForce 8600 GT" },
   { 0x10DE0402, "GeForce 8600 GT" },
   { 0x10DE0404, "GeForce 8400 GS" },
+  { 0x10DE0405, "GeForce 9500M GS" },
   { 0x10DE0407, "GeForce 8600M GT" },
   { 0x10DE0409, "GeForce 8700M GT" },
   { 0x10DE040A, "Quadro FX 370" },
@@ -372,6 +373,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE040D, "Quadro FX 1600M" },
   { 0x10DE040E, "Quadro FX 570" },
   { 0x10DE040F, "Quadro FX 1700" },
+  { 0x10DE0420, "GeForce 8400 SE" },
   { 0x10DE0421, "GeForce 8500 GT" },
   { 0x10DE0422, "GeForce 8400 GS" },
   { 0x10DE0423, "GeForce 8300 GS" },
@@ -385,11 +387,16 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE042B, "Quadro NVS 135M" },
   { 0x10DE042D, "Quadro FX 360M" },
   { 0x10DE042F, "Quadro NVS 290" },
+  { 0x10DE0600, "GeForce 8800 GTS 512" },
   { 0x10DE0602, "GeForce 8800 GT" },
+  { 0x10DE0604, "GeForce 9800 GX2" },
   { 0x10DE0606, "GeForce 8800 GS" },
+  { 0x10DE0609, "GeForce 8800M GTS" },
+  { 0x10DE060C, "GeForce 8800M GTX" },
   { 0x10DE060D, "GeForce 8800 GS" },
   { 0x10DE0611, "GeForce 8800 GT" },
   { 0x10DE061A, "Quadro FX 3700" },
+  { 0x10DE061C, "Quadro FX 3600M" },
   { 0x10DE0622, "GeForce 9600 GT" },
   { 0x10DE06E4, "GeForce 8400 GS" },
 
@@ -758,6 +765,7 @@ NVIsG80(int chipType)
         case 0x0400:
         case 0x0420:
         case 0x05e0:
+        case 0x05f0:
         case 0x0600:
         case 0x0610:
         case 0x0620:
