@@ -407,7 +407,7 @@ G80CrtcBlankScreen(xf86CrtcPtr crtc, Bool blank)
         C(0x00000860 + headOff, 0);
         C(0x00000864 + headOff, 0);
         pNv->reg[0x00610380/4] = 0;
-        pNv->reg[0x00610384/4] = pNv->RamAmountKBytes * 1024 - 1;
+        pNv->reg[0x00610384/4] = pNv->videoRam * 1024 - 1;
         pNv->reg[0x00610388/4] = 0x150000;
         pNv->reg[0x0061038C/4] = 0;
         C(0x00000884 + headOff, (pNv->videoRam << 2) - 0x40);

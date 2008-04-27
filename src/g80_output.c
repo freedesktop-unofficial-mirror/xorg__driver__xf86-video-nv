@@ -106,6 +106,10 @@ static Bool G80ReadPortMapping(int scrnIndex, G80Ptr pNv)
         port = (b >> 4) & 0xf;
         or = ffs((b >> 24) & 0xf) - 1;
 
+        if(b & 0x300000)
+            /* Can't handle this type of output yet */
+            continue;
+
         if(type == 0xe) break;
 
         switch(type) {
