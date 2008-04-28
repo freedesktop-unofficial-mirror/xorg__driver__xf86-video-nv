@@ -367,8 +367,7 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     pNv->architecture = pNv->reg[0] >> 20 & 0x1ff;
-    pNv->RamAmountKBytes = pNv->RamAmountKBytes = (pNv->reg[0x0010020C/4] & 0xFFF00000) >> 10;
-    pNv->videoRam = pNv->RamAmountKBytes;
+    pNv->videoRam = pNv->RamAmountKBytes = (pNv->reg[0x0010020C/4] & 0xFFF00000) >> 10;
 
     /* Determine the size of BAR1 */
     /* Some configs have BAR1 < total RAM < 256 MB */
