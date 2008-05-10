@@ -106,14 +106,16 @@ typedef enum {
     OPTION_NOACCEL,
     OPTION_ACCEL_METHOD,
     OPTION_FP_DITHER,
+    OPTION_ALLOW_DUAL_LINK,
 } G80Opts;
 
 static const OptionInfoRec G80Options[] = {
-    { OPTION_HW_CURSOR,         "HWCursor",     OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_NOACCEL,           "NoAccel",      OPTV_BOOLEAN,   {0}, FALSE },
-    { OPTION_ACCEL_METHOD,      "AccelMethod",  OPTV_STRING,    {0}, FALSE },
-    { OPTION_FP_DITHER,         "FPDither",     OPTV_BOOLEAN,   {0}, FALSE },
-    { -1,                       NULL,           OPTV_NONE,      {0}, FALSE }
+    { OPTION_HW_CURSOR,         "HWCursor",             OPTV_BOOLEAN,   {0}, FALSE },
+    { OPTION_NOACCEL,           "NoAccel",              OPTV_BOOLEAN,   {0}, FALSE },
+    { OPTION_ACCEL_METHOD,      "AccelMethod",          OPTV_STRING,    {0}, FALSE },
+    { OPTION_FP_DITHER,         "FPDither",             OPTV_BOOLEAN,   {0}, FALSE },
+    { OPTION_ALLOW_DUAL_LINK,   "AllowDualLinkModes",   OPTV_BOOLEAN,   {0}, FALSE },
+    { -1,                       NULL,                   OPTV_NONE,      {0}, FALSE }
 };
 
 static Bool
@@ -331,6 +333,7 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     pNv->Dither = xf86ReturnOptValBool(pNv->Options, OPTION_FP_DITHER, FALSE);
+    pNv->AllowDualLink = xf86ReturnOptValBool(pNv->Options, OPTION_ALLOW_DUAL_LINK, FALSE);
 
     /* Set the bits per RGB for 8bpp mode */
     if(pScrn->depth == 8)

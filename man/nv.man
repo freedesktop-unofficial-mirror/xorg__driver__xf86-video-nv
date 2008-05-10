@@ -162,6 +162,10 @@ Default: XAA.
 Enable or disable flat panel dithering by default.
 Dithering can also be enabled or disabled using the RandR 1.2 \*qdither\*q output property.
 Default: off.
+.TP
+.BI "Option \*qAllowDualLinkModes\*q \*q" boolean \*q
+Allow validation of dual-link DVI modes.
+Not all GPUs are configured at boot time to be able to handle dual-link modes, so they are disabled by default.
 .
 .\" RandR 1.2
 .PP

@@ -67,6 +67,7 @@ typedef struct G80Rec {
     Bool                NoAccel;
     AccelMethod         AccelMethod;
     Bool                Dither;
+    Bool                AllowDualLink;
 
     /* XAA */
     XAAInfoRecPtr       xaa;

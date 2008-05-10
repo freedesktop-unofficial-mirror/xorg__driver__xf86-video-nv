@@ -69,9 +69,10 @@ G80SorDPMSSet(xf86OutputPtr output, int mode)
 static int
 G80TMDSModeValid(xf86OutputPtr output, DisplayModePtr mode)
 {
-    // Disable dual-link modes until I can find a way to make them work
-    // reliably.
-    if (mode->Clock > 165000)
+    G80Ptr pNv = G80PTR(output->scrn);
+
+    // Disable dual-link modes unless enabled in the config file.
+    if (mode->Clock > 165000 && !pNv->AllowDualLink)
         return MODE_CLOCK_HIGH;
 
     return G80OutputModeValid(output, mode);
