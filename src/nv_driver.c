@@ -113,7 +113,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2008/03/06 */
+/* Known cards as of 2008/06/05 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -366,6 +366,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0404, "GeForce 8400 GS" },
   { 0x10DE0405, "GeForce 9500M GS" },
   { 0x10DE0407, "GeForce 8600M GT" },
+  { 0x10DE0408, "GeForce 9650M GS" },
   { 0x10DE0409, "GeForce 8700M GT" },
   { 0x10DE040A, "Quadro FX 370" },
   { 0x10DE040B, "Quadro NVS 320M" },
@@ -386,6 +387,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE042A, "Quadro NVS 130M" },
   { 0x10DE042B, "Quadro NVS 135M" },
   { 0x10DE042D, "Quadro FX 360M" },
+  { 0x10DE042E, "GeForce 9300M G" },
   { 0x10DE042F, "Quadro NVS 290" },
   { 0x10DE0600, "GeForce 8800 GTS 512" },
   { 0x10DE0602, "GeForce 8800 GT" },
@@ -400,8 +402,14 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE061A, "Quadro FX 3700" },
   { 0x10DE061C, "Quadro FX 3600M" },
   { 0x10DE0622, "GeForce 9600 GT" },
-  { 0x10DE0623, "GeForce 9600 GS" },
+  { 0x10DE0647, "GeForce 9600M GT" },
+  { 0x10DE0648, "GeForce 9600M GS" },
+  { 0x10DE0649, "GeForce 9600M GT" },
+  { 0x10DE064B, "GeForce 9500M G" },
   { 0x10DE06E4, "GeForce 8400 GS" },
+  { 0x10DE06E5, "GeForce 9300M GS" },
+  { 0x10DE06E8, "GeForce 9200M GS" },
+  { 0x10DE06E9, "GeForce 9300M GS" },
 
   {-1, NULL}
 };
