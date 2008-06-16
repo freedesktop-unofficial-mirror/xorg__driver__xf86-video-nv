@@ -113,7 +113,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2008/06/05 */
+/* Known cards as of 2008/06/16 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -389,6 +389,8 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE042D, "Quadro FX 360M" },
   { 0x10DE042E, "GeForce 9300M G" },
   { 0x10DE042F, "Quadro NVS 290" },
+  { 0x10DE05E1, "GeForce GTX 280" },
+  { 0x10DE05E2, "GeForce GTX 260" },
   { 0x10DE0600, "GeForce 8800 GTS 512" },
   { 0x10DE0602, "GeForce 8800 GT" },
   { 0x10DE0604, "GeForce 9800 GX2" },
