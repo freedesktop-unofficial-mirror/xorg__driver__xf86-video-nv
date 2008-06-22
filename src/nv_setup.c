@@ -698,6 +698,10 @@ NVCommonSetup(ScrnInfoPtr pScrn)
        pNv->fpSyncs = pNv->PRAMDAC[0x0848/4] & 0x30000033;
        xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Panel size is %i x %i\n",
                   pNv->fpWidth, pNv->fpHeight);
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "NOTE: This driver cannot "
+                  "reconfigure the BIOS-programmed size.\n");
+       xf86DrvMsg(pScrn->scrnIndex, X_INFO, "These dimensions will be used as "
+                  "the panel size for mode validation.\n");
     }
 
     if(monitorA)
