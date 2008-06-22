@@ -194,7 +194,7 @@ Authors include: David McKay, Jarno Paananen, Chas Inman, Dave Schmenk,
 Mark Vojkovich, Aaron Plattner
 .SH COPYRIGHT
 .LP
-Copyright (c) 2003 - 2007 NVIDIA, Corporation
+Copyright (c) 2003 - 2008 NVIDIA, Corporation
 .LP
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the
