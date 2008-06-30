@@ -211,9 +211,9 @@ fail:
     return FALSE;
 }
 
-static uint32_t i2cAddr(const int port)
+static CARD32 i2cAddr(const int port)
 {
-    const uint32_t base = (port > 3) ? 0x0000E1E0 : 0x0000E138;
+    const CARD32 base = (port > 3) ? 0x0000E1E0 : 0x0000E138;
     return base + port * 0x18;
 }
 
@@ -297,7 +297,7 @@ ProbeDDC(I2CBusPtr i2c)
     G80Ptr pNv = G80PTR(pScrn);
     xf86MonPtr monInfo = NULL;
     const int bus = i2c->DriverPrivate.val;
-    const uint32_t addr = i2cAddr(bus);
+    const CARD32 addr = i2cAddr(bus);
 
     xf86DrvMsg(pScrn->scrnIndex, X_INFO,
             "Probing for EDID on I2C bus %i...\n", bus);
