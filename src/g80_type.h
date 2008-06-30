@@ -7,6 +7,8 @@
 #include <xf86Crtc.h>
 #include <xf86int10.h>
 
+#define G80_NUM_I2C_PORTS 6
+
 typedef enum Head {
     HEAD0 = 0,
     HEAD1
@@ -51,10 +53,11 @@ typedef struct G80Rec {
     struct {
         ORNum           dac;
         ORNum           sor;
-    } i2cMap[4];
+    } i2cMap[G80_NUM_I2C_PORTS];
     struct {
         Bool            present;
         ORNum           or;
+        int             i2cPort;
     } lvds;
     unsigned            loadVal;
 

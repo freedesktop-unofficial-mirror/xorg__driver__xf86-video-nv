@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 NVIDIA, Corporation
+ * Copyright (c) 2007-2008 NVIDIA, Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -143,7 +143,15 @@ G80SorDetect(xf86OutputPtr output)
 static xf86OutputStatus
 G80SorLVDSDetect(xf86OutputPtr output)
 {
-    /* Assume LVDS is always connected */
+    G80OutputPrivPtr pPriv = output->driver_private;
+
+    if(pPriv->i2c) {
+        /* If LVDS has an I2C port, use the normal probe routine to get the
+         * EDID, if possible. */
+        G80SorDetect(output);
+    }
+
+    /* Ignore G80SorDetect and assume LVDS is always connected */
     return XF86OutputStatusConnected;
 }
 
@@ -242,6 +250,13 @@ static DisplayModePtr
 G80SorGetLVDSModes(xf86OutputPtr output)
 {
     G80OutputPrivPtr pPriv = output->driver_private;
+
+    /* If an EDID was read during detection, use the modes from that. */
+    DisplayModePtr modes = G80OutputGetDDCModes(output);
+    if(modes)
+        return modes;
+
+    /* Otherwise, feed in the mode we read during initialization. */
     return xf86DuplicateMode(pPriv->nativeMode);
 }
 
