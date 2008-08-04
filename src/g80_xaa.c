@@ -125,7 +125,7 @@ G80SetupForScreenToScreenCopy(
     if(rop == GXcopy && planemask == ~0) {
         G80DmaNext (pNv, 3);
     } else {
-        G80DmaNext (pNv, 1);
+        G80DmaNext (pNv, 4);
         G80SetRopSolid(pNv, rop, planemask);
     }
     pNv->DMAKickoffCallback = G80DMAKickoffCallback;
@@ -177,7 +177,7 @@ G80SetupForSolidFill(
 
     G80SetClip(pNv, 0, 0, 0x7fff, 0x7fff);
     G80DmaStart(pNv, 0x2ac, 1);
-    G80DmaNext (pNv, 1);
+    G80DmaNext (pNv, 4);
     G80SetRopSolid(pNv, rop, planemask);
     G80DmaStart(pNv, 0x580, 1);
     G80DmaNext (pNv, 4);
@@ -235,7 +235,7 @@ G80SetupForMono8x8PatternFill(
     G80SetPattern(pNv, bg, fg, patternx, patterny);
 
     G80DmaStart(pNv, 0x2ac, 1);
-    G80DmaNext (pNv, 1);
+    G80DmaNext (pNv, 4);
     G80DmaStart(pNv, 0x580, 1);
     G80DmaNext (pNv, 4);
     G80DmaStart(pNv, 0x588, 1);
@@ -275,7 +275,7 @@ G80SetupForScanlineCPUToScreenColorExpandFill(
     planemask |= mask;
 
     G80DmaStart(pNv, 0x2ac, 1);
-    G80DmaNext (pNv, 1);
+    G80DmaNext (pNv, 4);
     G80SetRopSolid(pNv, rop, planemask);
     G80DmaStart(pNv, 0x800, 1);
     G80DmaNext (pNv, 1);
@@ -353,7 +353,7 @@ G80SetupForScanlineImageWrite(
     if(rop == GXcopy && planemask == ~0) {
         G80DmaNext (pNv, 3);
     } else {
-        G80DmaNext (pNv, 1);
+        G80DmaNext (pNv, 4);
         G80SetRopSolid(pNv, rop, planemask);
     }
 
@@ -420,7 +420,7 @@ G80SetupForSolidLine(ScrnInfoPtr pScrn, int color, int rop, unsigned planemask)
 
     G80SetClip(pNv, 0, 0, 0x7fff, 0x7fff);
     G80DmaStart(pNv, 0x2ac, 1);
-    G80DmaNext (pNv, 1);
+    G80DmaNext (pNv, 4);
     G80SetRopSolid(pNv, rop, planemask);
     G80DmaStart(pNv, 0x580, 1);
     G80DmaNext (pNv, 1);
