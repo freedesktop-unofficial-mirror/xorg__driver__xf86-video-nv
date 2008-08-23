@@ -95,7 +95,7 @@ G80SetRopSolid(G80Ptr pNv, CARD32 rop, CARD32 planemask)
     }
 }
 
-void inline
+inline void
 G80SetClip(G80Ptr pNv, int x, int y, int w, int h)
 {
     G80DmaStart(pNv, 0x280, 4);

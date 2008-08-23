@@ -451,7 +451,6 @@ G80CreateOutputs(ScrnInfoPtr pScrn)
         pPriv->scale = G80_SCALE_ASPECT;
 
         if(pNv->lvds.i2cPort != -1) {
-            I2CBusPtr i2c;
             char i2cName[16];
 
             snprintf(i2cName, sizeof(i2cName), "I2C%i (LVDS)", pNv->lvds.i2cPort);
