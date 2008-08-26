@@ -113,7 +113,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2008/08/25 */
+/* Known cards as of 2008/08/26 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -412,6 +412,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0628, "GeForce 9800M GTS" },
   { 0x10DE062A, "GeForce 9700M GTS" },
   { 0x10DE062C, "GeForce 9800M GTS" },
+  { 0x10DE0640, "GeForce 9500 GT" },
   { 0x10DE0647, "GeForce 9600M GT" },
   { 0x10DE0648, "GeForce 9600M GS" },
   { 0x10DE0649, "GeForce 9600M GT" },
