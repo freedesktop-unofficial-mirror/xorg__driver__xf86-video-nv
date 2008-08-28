@@ -275,7 +275,7 @@ G80SetupForScanlineCPUToScreenColorExpandFill(
     planemask |= mask;
 
     G80DmaStart(pNv, 0x2ac, 1);
-    G80DmaNext (pNv, 4);
+    G80DmaNext (pNv, 1);
     G80SetRopSolid(pNv, rop, planemask);
     G80DmaStart(pNv, 0x800, 1);
     G80DmaNext (pNv, 1);
