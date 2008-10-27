@@ -42,8 +42,21 @@ NVDACPanelTweaks(NVPtr pNv, NVRegPtr state)
           we can do is experiment and apply hacks. */
 
        if(((pNv->Chipset & 0xffff) == 0x0328) && (state->bpp == 32)) {
-          /* At least one NV34 laptop needs this workaround. */
-          tweak = -1;
+#if XSERVER_LIBPCIACCESS
+          if (((pNv->PciInfo->subvendor_id & 0xffff) == 0x1179) &&
+              ((pNv->PciInfo->subdevice_id & 0xffff) == 0x0020))
+#else
+          if (((pNv->PciInfo->subsysVendor & 0xffff) == 0x1179) &&
+              ((pNv->PciInfo->subsysCard & 0xffff) == 0x0020))
+#endif
+          {
+
+             /* Toshiba Tecra M2 */
+             tweak = 1;
+          } else {
+             /* At least one NV34 laptop needs this workaround. */
+             tweak = -1;
+          }
        }
 
        if((pNv->Chipset & 0xfff0) == 0x0310) {
