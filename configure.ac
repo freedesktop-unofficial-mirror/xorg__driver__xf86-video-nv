@@ -74,9 +74,6 @@ CFLAGS="$XORG_CFLAGS"
 # RandR 1.2
 AC_CHECK_HEADER(xf86Modes.h,[BUILD_XMODES=no],[BUILD_XMODES=yes],[#include "xorg-server.h"])
 
-# Required by exa.h
-AC_DEFINE(EXA_DRIVER_KNOWN_MAJOR, 3, [Major version of EXA we can handle])
-
 # PCI rework
 AC_CHECK_DECL(XSERVER_LIBPCIACCESS,
               [XSERVER_LIBPCIACCESS=yes],[XSERVER_LIBPCIACCESS=no],
