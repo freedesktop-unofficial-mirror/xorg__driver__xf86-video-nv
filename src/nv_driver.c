@@ -415,7 +415,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0610, "GeForce 9600 GSO" },
   { 0x10DE0611, "GeForce 8800 GT" },
   { 0x10DE0612, "GeForce 9800 GTX" },
-  { 0x10DE0613, "GeForce 9800 GTK+" },
+  { 0x10DE0613, "GeForce 9800 GTX+" },
   { 0x10DE0614, "GeForce 9800 GT" },
   { 0x10DE061A, "Quadro FX 3700" },
   { 0x10DE061C, "Quadro FX 3600M" },
