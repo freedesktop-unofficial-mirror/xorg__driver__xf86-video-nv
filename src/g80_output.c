@@ -217,8 +217,9 @@ fail:
 
 static CARD32 i2cAddr(const int port)
 {
-    const CARD32 base = (port > 3) ? 0x0000E1E0 : 0x0000E138;
-    return base + port * 0x18;
+    const CARD32 base = (port > 3) ? 0x0000E1D4 : 0x0000E138;
+    const CARD32 offset = (port > 3) ? 0x20 : 0x18;
+    return base + port * offset;
 }
 
 static void G80_I2CPutBits(I2CBusPtr b, int clock, int data)
