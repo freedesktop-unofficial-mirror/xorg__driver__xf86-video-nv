@@ -124,7 +124,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2008/08/26 */
+/* Known cards as of 2009/05/15 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -288,6 +288,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0147, "GeForce 6700 XL" },
   { 0x10DE0148, "GeForce Go 6600" },
   { 0x10DE0149, "GeForce Go 6600 GT" },
+  { 0x10DE014A, "Quadro NVS 440" },
   { 0x10DE014C, "Quadro FX 550" },
   { 0x10DE014D, "Quadro FX 550" },
   { 0x10DE014E, "Quadro FX 540" },
@@ -322,6 +323,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0099, "GeForce Go 7800 GTX" },
   { 0x10DE009D, "Quadro FX 4500" },
 
+  { 0x10DE01D0, "GeForce 7350 LE" },
   { 0x10DE01D1, "GeForce 7300 LE" },
   { 0x10DE01D3, "GeForce 7300 SE" },
   { 0x10DE01D6, "GeForce Go 7200" },
@@ -335,6 +337,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE01DE, "Quadro FX 350" },
   { 0x10DE01DF, "GeForce 7300 GS" },
 
+  { 0x10DE0390, "GeForce 7650 GS" },
   { 0x10DE0391, "GeForce 7600 GT" },
   { 0x10DE0392, "GeForce 7600 GS" },
   { 0x10DE0393, "GeForce 7300 GT" },
@@ -351,6 +354,10 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0290, "GeForce 7900 GTX" },
   { 0x10DE0291, "GeForce 7900 GT" },
   { 0x10DE0292, "GeForce 7900 GS" },
+  { 0x10DE0293, "GeForce 7950 GX2" },
+  { 0x10DE0294, "GeForce 7950 GX2" },
+  { 0x10DE0295, "GeForce 7950 GT"},
+  { 0x10DE0297, "GeForce Go 7950 GTX" },
   { 0x10DE0298, "GeForce Go 7900 GS" },
   { 0x10DE0299, "GeForce Go 7900 GTX" },
   { 0x10DE029A, "Quadro FX 2500M" },
@@ -364,7 +371,13 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0241, "GeForce 6150 LE" },
   { 0x10DE0242, "GeForce 6100" },
   { 0x10DE0244, "GeForce Go 6150" },
+  { 0x10DE0245, "Quadro NVS 210S / NVIDIA GeForce 6150LE" },
   { 0x10DE0247, "GeForce Go 6100" },
+
+  { 0x10DE03D0, "GeForce 6150SE" },
+  { 0x10DE03D1, "GeForce 6100 nForce 405" },
+  { 0x10DE03D2, "GeForce 6100 nForce 400" },
+  { 0x10DE03D5, "GeForce 6100 nForce 420" },
 
 /*************** G8x ***************/
   { 0x10DE0191, "GeForce 8800 GTX" },
@@ -403,13 +416,23 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE042D, "Quadro FX 360M" },
   { 0x10DE042E, "GeForce 9300M G" },
   { 0x10DE042F, "Quadro NVS 290" },
+  { 0x10DE05E0, "GeForce GTX 295" },
   { 0x10DE05E1, "GeForce GTX 280" },
   { 0x10DE05E2, "GeForce GTX 260" },
+  { 0x10DE05E3, "GeForce GTX 285" },
+  { 0x10DE05F9, "Quadro CX" },
+  { 0x10DE05FD, "Quadro FX 5800" },
+  { 0x10DE05FE, "Quadro FX 4800" },
+  { 0x10DE05FF, "Quadro FX 3800" },
   { 0x10DE0600, "GeForce 8800 GTS 512" },
+  { 0x10DE0601, "GeForce 9800 GT" },
   { 0x10DE0602, "GeForce 8800 GT" },
   { 0x10DE0604, "GeForce 9800 GX2" },
+  { 0x10DE0605, "GeForce 9800 GT" },
   { 0x10DE0606, "GeForce 8800 GS" },
+  { 0x10DE0608, "GeForce 9800M GTX" },
   { 0x10DE0609, "GeForce 8800M GTS" },
+  { 0x10DE060B, "GeForce 9800M GT" },
   { 0x10DE060C, "GeForce 8800M GTX" },
   { 0x10DE060D, "GeForce 8800 GS" },
   { 0x10DE0610, "GeForce 9600 GSO" },
@@ -417,25 +440,49 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0612, "GeForce 9800 GTX" },
   { 0x10DE0613, "GeForce 9800 GTX+" },
   { 0x10DE0614, "GeForce 9800 GT" },
+  { 0x10DE0615, "GeForce GTS 250" },
+  { 0x10DE0617, "GeForce 9800M GTX" },
   { 0x10DE061A, "Quadro FX 3700" },
   { 0x10DE061C, "Quadro FX 3600M" },
+  { 0x10DE061E, "Quadro FX 3700M" },
   { 0x10DE0622, "GeForce 9600 GT" },
   { 0x10DE0623, "GeForce 9600 GS" },
+  { 0x10DE0625, "GeForce 9600 GSO 512" },
+  { 0x10DE0626, "GeForce GT 130" },
+  { 0x10DE0627, "GeForce GT 140" },
   { 0x10DE0628, "GeForce 9800M GTS" },
   { 0x10DE062A, "GeForce 9700M GTS" },
+  { 0x10DE062B, "GeForce 9800M GS" },
   { 0x10DE062C, "GeForce 9800M GTS" },
+  { 0x10DE0638, "Quadro FX 1800" },
+  { 0x10DE063A, "Quadro FX 2700M" },
   { 0x10DE0640, "GeForce 9500 GT" },
+  { 0x10DE0641, "GeForce 9400 GT" },
+  { 0x10DE0643, "GeForce 9500 GT" },
+  { 0x10DE0646, "GeForce GT 120" },
   { 0x10DE0647, "GeForce 9600M GT" },
   { 0x10DE0648, "GeForce 9600M GS" },
   { 0x10DE0649, "GeForce 9600M GT" },
+  { 0x10DE064A, "GeForce 9700M GT" },
   { 0x10DE064B, "GeForce 9500M G" },
+  { 0x10DE064C, "GeForce 9650M GT" },
+  { 0x10DE0656, "GeForce 9500 GT" },
+  { 0x10DE0658, "Quadro FX 380" },
+  { 0x10DE0659, "Quadro FX 580" },
+  { 0x10DE065C, "Quadro FX 770M" },
+  { 0x10DE06E0, "GeForce 9300 GE" },
   { 0x10DE06E1, "GeForce 9300 GS" },
   { 0x10DE06E4, "GeForce 8400 GS" },
   { 0x10DE06E5, "GeForce 9300M GS" },
+  { 0x10DE06E6, "GeForce G100" },
   { 0x10DE06E8, "GeForce 9200M GS" },
   { 0x10DE06E9, "GeForce 9300M GS" },
   { 0x10DE06EA, "Quadro NVS 150M" },
   { 0x10DE06EB, "Quadro NVS 160M" },
+  { 0x10DE06F8, "Quadro NVS 420" },
+  { 0x10DE06F9, "Quadro FX 370 LP" },
+  { 0x10DE06FA, "Quadro NVS 450" },
+  { 0x10DE06FD, "Quadro NVS 295" },
 
   {-1, NULL}
 };
@@ -808,6 +855,7 @@ NVIsG80(int chipType)
         case 0x0620:
         case 0x0630:
         case 0x0640:
+        case 0x0650:
         case 0x06e0:
         case 0x06f0:
             return TRUE;
