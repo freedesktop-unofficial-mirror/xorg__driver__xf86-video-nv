@@ -487,123 +487,6 @@ static SymTabRec NVKnownChipsets[] =
   {-1, NULL}
 };
 
-
-/*
- * List of symbols from other modules that this module references.  This
- * list is used to tell the loader that it is OK for symbols here to be
- * unresolved providing that it hasn't been told that they haven't been
- * told that they are essential via a call to xf86LoaderReqSymbols() or
- * xf86LoaderReqSymLists().  The purpose is this is to avoid warnings about
- * unresolved symbols that are not required.
- */
-
-static const char *vgahwSymbols[] = {
-    "vgaHWUnmapMem",
-    "vgaHWDPMSSet",
-    "vgaHWFreeHWRec",
-    "vgaHWGetHWRec",
-    "vgaHWGetIndex",
-    "vgaHWInit",
-    "vgaHWMapMem",
-    "vgaHWProtect",
-    "vgaHWRestore",
-    "vgaHWSave",
-    "vgaHWSaveScreen",
-    NULL
-};
-
-static const char *fbSymbols[] = {
-    "fbPictureInit",
-    "fbScreenInit",
-    NULL
-};
-
-static const char *xaaSymbols[] = {
-    "XAACopyROP",
-    "XAACreateInfoRec",
-    "XAADestroyInfoRec",
-    "XAAFallbackOps",
-    "XAAInit",
-    "XAAPatternROP",
-    NULL
-};
-
-static const char *ramdacSymbols[] = {
-    "xf86CreateCursorInfoRec",
-    "xf86DestroyCursorInfoRec",
-    "xf86InitCursor",
-    NULL
-};
-
-static const char *ddcSymbols[] = {
-    "xf86PrintEDID",
-    "xf86DoEDID_DDC2",
-    "xf86SetDDCproperties",
-    NULL
-};
-
-#ifdef XFree86LOADER
-static const char *vbeSymbols[] = {
-    "VBEInit",
-    "vbeFree",
-    "vbeDoEDID",
-    NULL
-};
-
-static const char *vbeModeSymbols[] = {
-    "VBEExtendedInit",
-    "VBEGetVBEInfo",
-    "VBEGetModePool",
-    "VBEValidateModes",
-    "VBESetModeParameters",
-    "VBEGetVBEMode",
-    "VBESetVBEMode",
-    NULL
-};
-#endif
-
-static const char *i2cSymbols[] = {
-    "xf86CreateI2CBusRec",
-    "xf86I2CBusInit",
-    NULL
-};
-
-static const char *shadowSymbols[] = {
-    "ShadowFBInit",
-    NULL
-};
-
-static const char *fbdevHWSymbols[] = {
-    "fbdevHWInit",
-    "fbdevHWUseBuildinMode",
-
-    "fbdevHWGetVidmem",
-
-    /* colormap */
-    "fbdevHWLoadPaletteWeak",
-
-    /* ScrnInfo hooks */
-    "fbdevHWAdjustFrameWeak",
-    "fbdevHWEnterVT",
-    "fbdevHWLeaveVTWeak",
-    "fbdevHWModeInit",
-    "fbdevHWSave",
-    "fbdevHWSwitchModeWeak",
-    "fbdevHWValidModeWeak",
-
-    "fbdevHWMapMMIO",
-    "fbdevHWMapVidmem",
-
-    NULL
-};
-
-static const char *int10Symbols[] = {
-    "xf86FreeInt10",
-    "xf86InitInt10",
-    NULL
-};
-
-
 #ifdef XFree86LOADER
 
 static MODULESETUPPROTO(nvSetup);
@@ -712,20 +595,6 @@ nvSetup(pointer module, pointer opts, int *errmaj, int *errmin)
             0
 #endif
         );
-
-        /*
-         * Modules that this driver always requires may be loaded here
-         * by calling LoadSubModule().
-         */
-
-        /*
-         * Tell the loader about symbols from other modules that this module
-         * might refer to.
-         */
-        LoaderRefSymLists(vgahwSymbols, xaaSymbols, fbSymbols,
-                          ramdacSymbols, shadowSymbols,
-                          i2cSymbols, ddcSymbols, vbeSymbols,
-                          fbdevHWSymbols, int10Symbols, NULL);
 
         /*
          * The return value must be non-NULL on success even though there
@@ -1285,11 +1154,9 @@ Bool NVI2CInit(ScrnInfoPtr pScrn)
     char *mod = "i2c";
 
     if (xf86LoadSubModule(pScrn, mod)) {
-        xf86LoaderReqSymLists(i2cSymbols,NULL);
 
         mod = "ddc";
         if(xf86LoadSubModule(pScrn, mod)) {
-            xf86LoaderReqSymLists(ddcSymbols, NULL);
             return NVDACi2cInit(pScrn);
         } 
     }
@@ -1388,7 +1255,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 
     /* Initialize the card through int10 interface if needed */
     if (xf86LoadSubModule(pScrn, "int10")) {
- 	xf86LoaderReqSymLists(int10Symbols, NULL);
 #if !defined(__alpha__) && !defined(__powerpc__)
         xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Initializing int10\n");
         pNv->pInt = xf86InitInt10(pNv->pEnt->index);
@@ -1524,8 +1390,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	return FALSE;
     }
     
-    xf86LoaderReqSymLists(vgahwSymbols, NULL);
-
     /*
      * Allocate a vgaHWRec
      */
@@ -1594,7 +1458,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	    return FALSE;
 	}
 	
-	xf86LoaderReqSymLists(fbdevHWSymbols, NULL);
 	if (!fbdevHWInit(pScrn, pNv->PciInfo, NULL)) {
 	    xf86FreeInt10(pNv->pInt);
 	    return FALSE;
@@ -1702,7 +1565,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
                        "enabled.\n");
             return FALSE;
         }
-        xf86LoaderReqSymLists(vbeModeSymbols, NULL);
         pNv->pVbe = VBEExtendedInit(NULL, pNv->pEnt->index,
                                     SET_BIOS_SCRATCH | RESTORE_BIOS_SCRATCH);
         if (!pNv->pVbe) return FALSE;
@@ -2034,8 +1896,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	return FALSE;
     }
 
-    xf86LoaderReqSymLists(fbSymbols, NULL);
-    
     /* Load XAA if needed */
     if (!pNv->NoAccel) {
 	if (!xf86LoadSubModule(pScrn, "xaa")) {
@@ -2043,7 +1903,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	    NVFreeRec(pScrn);
 	    return FALSE;
 	}
-	xf86LoaderReqSymLists(xaaSymbols, NULL);
     }
 
     /* Load ramdac if needed */
@@ -2053,7 +1912,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	    NVFreeRec(pScrn);
 	    return FALSE;
 	}
-	xf86LoaderReqSymLists(ramdacSymbols, NULL);
     }
 
     /* Load shadowfb if needed */
@@ -2063,7 +1921,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	    NVFreeRec(pScrn);
 	    return FALSE;
 	}
-	xf86LoaderReqSymLists(shadowSymbols, NULL);
     }
 
     pNv->CurrentLayout.bitsPerPixel = pScrn->bitsPerPixel;
