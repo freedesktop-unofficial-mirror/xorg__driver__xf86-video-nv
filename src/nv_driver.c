@@ -1264,8 +1264,10 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 #endif
     }
    
+#ifndef XSERVER_LIBPCIACCESS
     xf86SetOperatingState(resVgaIo, pNv->pEnt->index, ResUnusedOpr);
     xf86SetOperatingState(resVgaMem, pNv->pEnt->index, ResDisableOpr);
+#endif
 
     /* Set pScrn->monitor */
     pScrn->monitor = pScrn->confScreen->monitor;
@@ -1642,6 +1644,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     xf86DrvMsg(pScrn->scrnIndex, from, "MMIO registers at 0x%lX\n",
 	       (unsigned long)pNv->IOAddress);
      
+#ifndef XSERVER_LIBPCIACCESS
     if (xf86RegisterResources(pNv->pEnt->index, NULL, ResExclusive)) {
 	xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 		"xf86RegisterResources() found resource conflicts\n");
@@ -1649,6 +1652,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	NVFreeRec(pScrn);
 	return FALSE;
     }
+#endif
 
     switch (pNv->Chipset & 0x0ff0) {
     case 0x0100:   /* GeForce 256 */

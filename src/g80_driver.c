@@ -29,8 +29,9 @@
 #include <string.h>
 
 #include <xf86_OSproc.h>
+#ifndef XSERVER_LIBPCIACCESS
 #include <xf86Resources.h>
-#include <xf86RandR12.h>
+#endif
 #include <mipointer.h>
 #include <mibstore.h>
 #include <micmap.h>
@@ -43,6 +44,7 @@
 #include <X11/extensions/dpms.h>
 #endif
 
+#include <xf86RandR12.h>
 
 #include "nv_const.h"
 #include "g80_type.h"
@@ -229,8 +231,10 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     /* Disable VGA access */
+#ifndef XSERVER_LIBPCIACCESS
     xf86SetOperatingState(resVgaIo, pEnt->index, ResUnusedOpr);
     xf86SetOperatingState(resVgaMem, pEnt->index, ResDisableOpr);
+#endif
 
     pScrn->monitor = pScrn->confScreen->monitor;
 
@@ -314,11 +318,13 @@ G80PreInit(ScrnInfoPtr pScrn, int flags)
     xf86DrvMsg(pScrn->scrnIndex, X_INFO, "MMIO registers mapped at %p\n",
                (void*)pNv->reg);
 
+#ifndef XSERVER_LIBPCIACCESS
     if(xf86RegisterResources(pEnt->index, NULL, ResExclusive)) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "xf86RegisterResources() found "
                    "resource conflicts\n");
         goto fail;
     }
+#endif
 
     pNv->architecture = pNv->reg[0] >> 20 & 0x1ff;
     tmp = pNv->reg[0x0010020C/4];
