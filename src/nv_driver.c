@@ -865,6 +865,12 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
                       NVGetPCIXpressChip(dev) : dev->vendor_id << 16 | dev->device_id;
     const char *name = xf86TokenToString(NVKnownChipsets, id);
 
+    if (pci_device_has_kernel_driver(dev)) {
+	ErrorF("The PCI device has a kernel module claiming it.\n");
+	ErrorF("This driver cannot operate until it has been unloaded\n");
+	return FALSE;
+    }
+
     if(dev->vendor_id == PCI_VENDOR_NVIDIA && !name &&
        !NVIsSupported(id) && !NVIsG80(id)) {
         /* See if pci.ids knows what the heck this thing is */
