@@ -21,9 +21,8 @@
 AUTOMAKE_OPTIONS = foreign
 SUBDIRS = src man compat
 
-EXTRA_DIST = README.G80 ChangeLog
+EXTRA_DIST = README.G80
 
-CLEANFILES = ChangeLog
 .PHONY: ChangeLog
 
 ChangeLog:
