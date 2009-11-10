@@ -728,6 +728,7 @@ NVIsG80(int chipType)
         case 0x06e0:
         case 0x06f0:
         case 0x0a20:
+        case 0x0a30:
         case 0x0a60:
         case 0x0a70:
         case 0x0ca0:
