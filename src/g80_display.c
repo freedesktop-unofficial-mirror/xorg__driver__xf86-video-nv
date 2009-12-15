@@ -645,6 +645,12 @@ G80CrtcCommit(xf86CrtcPtr crtc)
     C(0x00000080, 0);
 }
 
+static void
+G80DispGammaSet(xf86CrtcPtr crtc, CARD16 *red, CARD16 *green, CARD16 *blue,
+		int size)
+{
+}
+
 static const xf86CrtcFuncsRec g80_crtc_funcs = {
     .dpms = G80CrtcDPMSSet,
     .save = NULL,
@@ -654,7 +660,7 @@ static const xf86CrtcFuncsRec g80_crtc_funcs = {
     .mode_fixup = G80CrtcModeFixup,
     .prepare = G80CrtcPrepare,
     .mode_set = G80CrtcModeSet,
-    // .gamma_set = G80DispGammaSet,
+    .gamma_set = G80DispGammaSet,
     .commit = G80CrtcCommit,
     .shadow_create = NULL,
     .shadow_destroy = NULL,
