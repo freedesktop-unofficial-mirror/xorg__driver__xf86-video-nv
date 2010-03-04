@@ -614,9 +614,20 @@ G80InitHW(ScrnInfoPtr pScrn)
     pNv->reg[0x00706454/4] = 0x00010000;
     pNv->reg[0x00706460/4] = 0x0000502d;
     pNv->reg[0x00706474/4] = 0x00010000;
-    pNv->reg[0x00706480/4] = 0x0019003d;
-    pNv->reg[0x00706484/4] = (pNv->videoRam << 10) - G80_RESERVED_VIDMEM;
-    pNv->reg[0x00706494/4] = 0x00010000;
+    if(pNv->architecture == 0xaa || pNv->architecture == 0xac) {
+        uint64_t base = pNv->reg[0x00100E10/4] << 12;
+        size_t size = pNv->reg[0x00100E14/4] << 12;
+        uint64_t limit = base + size - G80_RESERVED_VIDMEM;
+
+        pNv->reg[0x00706480/4] = 0x1a003d;
+        pNv->reg[0x00706484/4] = limit;
+        pNv->reg[0x00706488/4] = base;
+        pNv->reg[0x0070648c/4] = base >> 32 | ((limit >> 8) & 0xff000000);
+    } else {
+        pNv->reg[0x00706480/4] = 0x0019003d;
+        pNv->reg[0x00706484/4] = (pNv->videoRam << 10) - G80_RESERVED_VIDMEM;
+        pNv->reg[0x00706494/4] = 0x00010000;
+    }
     pNv->reg[0x007064a0/4] = 0x0019003d;
     pNv->reg[0x007064a4/4] = bar0_pramin + 0x1100f;
     pNv->reg[0x007064a8/4] = bar0_pramin + 0x11000;

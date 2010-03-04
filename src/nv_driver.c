@@ -1,4 +1,5 @@
 /*
+ * Copyright 2010 NVIDIA Corporation
  * Copyright 1996-1997  David J. McKay
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -124,7 +125,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2009/05/15 */
+/* Known cards as of 2010/03/03 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -495,6 +496,15 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE06F9, "Quadro FX 370 LP" },
   { 0x10DE06FA, "Quadro NVS 450" },
   { 0x10DE06FD, "Quadro NVS 295" },
+  { 0x10DE0861, "GeForce 9400" },
+  { 0x10DE0862, "GeForce 9400M G" },
+  { 0x10DE0863, "GeForce 9400M" },
+  { 0x10DE086C, "GeForce 9300 / nForce 730i" },
+  { 0x10DE0872, "GeForce G102M" },
+  { 0x10DE0873, "GeForce G102M" },
+  { 0x10DE087A, "GeForce 9400" },
+  { 0x10DE087D, "ION" },
+  { 0x10DE087F, "ION LE" },
   { 0x10DE0A20, "GeForce GT 220" },
   { 0x10DE0A23, "GeForce 210" },
   { 0x10DE0A2A, "GeForce GT 230M" },
@@ -753,6 +763,8 @@ NVIsG80(int chipType)
         case 0x0650:
         case 0x06e0:
         case 0x06f0:
+        case 0x0860:
+        case 0x0870:
         case 0x0a20:
         case 0x0a30:
         case 0x0a60:
