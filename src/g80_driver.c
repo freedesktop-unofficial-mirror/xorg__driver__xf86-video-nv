@@ -615,8 +615,8 @@ G80InitHW(ScrnInfoPtr pScrn)
     pNv->reg[0x00706460/4] = 0x0000502d;
     pNv->reg[0x00706474/4] = 0x00010000;
     if(pNv->architecture == 0xaa || pNv->architecture == 0xac) {
-        uint64_t base = pNv->reg[0x00100E10/4] << 12;
-        size_t size = pNv->reg[0x00100E14/4] << 12;
+        uint64_t base = (uint64_t)pNv->reg[0x00100E10/4] << 12;
+        size_t size = (uint64_t)pNv->reg[0x00100E14/4] << 12;
         uint64_t limit = base + size - G80_RESERVED_VIDMEM;
 
         pNv->reg[0x00706480/4] = 0x1a003d;
