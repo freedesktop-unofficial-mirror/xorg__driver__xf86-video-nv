@@ -125,7 +125,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2010/03/03 */
+/* Known cards as of 2010/03/08 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -496,6 +496,16 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE06F9, "Quadro FX 370 LP" },
   { 0x10DE06FA, "Quadro NVS 450" },
   { 0x10DE06FD, "Quadro NVS 295" },
+  { 0x10DE0847, "GeForce 9100" },
+  { 0x10DE0848, "GeForce 8300" },
+  { 0x10DE0849, "GeForce 8200" },
+  { 0x10DE084A, "nForce 730a" },
+  { 0x10DE084B, "GeForce 9200" },
+  { 0x10DE084C, "nForce 980a/780a SLI" },
+  { 0x10DE084D, "nForce 750a SLI" },
+  { 0x10DE084F, "GeForce 8100 / nForce 720a" },
+  { 0x10DE0844, "GeForce 9100M G" },
+  { 0x10DE0845, "GeForce 8200M G" },
   { 0x10DE0861, "GeForce 9400" },
   { 0x10DE0862, "GeForce 9400M G" },
   { 0x10DE0863, "GeForce 9400M" },
@@ -763,6 +773,8 @@ NVIsG80(int chipType)
         case 0x0650:
         case 0x06e0:
         case 0x06f0:
+        case 0x0840:
+        case 0x0850:
         case 0x0860:
         case 0x0870:
         case 0x0a20:
