@@ -380,6 +380,9 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE03D2, "GeForce 6100 nForce 400" },
   { 0x10DE03D5, "GeForce 6100 nForce 420" },
 
+  { 0x10DE053E, "GeForce 7025" },
+  { 0x10DE053B, "GeForce 7050" },
+
 /*************** G8x ***************/
   { 0x10DE0191, "GeForce 8800 GTX" },
   { 0x10DE0193, "GeForce 8800 GTS" },
@@ -817,6 +820,7 @@ NVIsSupported(CARD32 id)
     case 0x0340:
     case 0x0390:
     case 0x03D0:
+    case 0x0530:
         return TRUE;
     }
 
@@ -1741,6 +1745,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     case 0x0290:   /* GeForce 7900 */
     case 0x0390:   /* GeForce 7600 */
     case 0x0240:   /* GeForce 6100 */
+    case 0x0530:   /* GeForce 7050, 7025 */
     case 0x03D0:
          pNv->Architecture =  NV_ARCH_40;
          break;
