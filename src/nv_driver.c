@@ -125,7 +125,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2010/03/08 */
+/* Known cards as of 2010/03/10 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -380,8 +380,11 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE03D2, "GeForce 6100 nForce 400" },
   { 0x10DE03D5, "GeForce 6100 nForce 420" },
 
-  { 0x10DE053E, "GeForce 7025" },
-  { 0x10DE053B, "GeForce 7050" },
+  { 0x10DE0531, "GeForce 7150M / nForce 630M" },
+  { 0x10DE0533, "GeForce 7000M / nForce 610M" },
+  { 0x10DE053A, "GeForce 7050 PV / nForce 630a" },
+  { 0x10DE053B, "GeForce 7050 PV / nForce 630a" },
+  { 0x10DE053E, "GeForce 7025 / nForce 630a" },
 
 /*************** G8x ***************/
   { 0x10DE0191, "GeForce 8800 GTX" },
