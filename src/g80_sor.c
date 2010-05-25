@@ -169,7 +169,7 @@ G80SorDestroy(xf86OutputPtr output)
 
     xf86DeleteMode(&pPriv->nativeMode, pPriv->nativeMode);
 
-    xfree(output->driver_private);
+    free(output->driver_private);
     output->driver_private = NULL;
 }
 
@@ -505,7 +505,7 @@ G80CreateSor(ScrnInfoPtr pScrn, ORNum or, PanelType panelType)
         if(!pPriv->nativeMode) {
             xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
                        "Failed to find LVDS native mode\n");
-            xfree(pPriv);
+            free(pPriv);
             return NULL;
         }
 

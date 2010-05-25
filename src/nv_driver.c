@@ -629,7 +629,7 @@ NVFreeRec(ScrnInfoPtr pScrn)
 {
     if (pScrn->driverPrivate == NULL)
         return;
-    xfree(pScrn->driverPrivate);
+    free(pScrn->driverPrivate);
     pScrn->driverPrivate = NULL;
 }
 
@@ -847,7 +847,7 @@ static Bool NVKernelModesettingEnabled(struct pci_device *device)
     busIdString = DRICreatePCIBusID(device);
 
     ret = drmCheckModesettingSupported(busIdString);
-    xfree(busIdString);
+    free(busIdString);
 
     return (ret == 0);
 }
@@ -994,8 +994,8 @@ NVProbe(DriverPtr drv, int flags)
 	}    
     }
 
-    xfree(devSections);
-    xfree(usedChips);
+    free(devSections);
+    free(usedChips);
 
     return foundScreen;
 }
@@ -1177,13 +1177,13 @@ NVCloseScreen(int scrnIndex, ScreenPtr pScreen)
     if (pNv->CursorInfoRec)
         xf86DestroyCursorInfoRec(pNv->CursorInfoRec);
     if (pNv->ShadowPtr)
-        xfree(pNv->ShadowPtr);
+        free(pNv->ShadowPtr);
     if (pNv->DGAModes)
-        xfree(pNv->DGAModes);
+        free(pNv->DGAModes);
     if (pNv->overlayAdaptor)
-	xfree(pNv->overlayAdaptor);
+	free(pNv->overlayAdaptor);
     if (pNv->blitAdaptor)
-        xfree(pNv->blitAdaptor);
+        free(pNv->blitAdaptor);
 
     pScrn->vtSema = FALSE;
     pScreen->CloseScreen = pNv->CloseScreen;
@@ -1306,7 +1306,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
             return FALSE;
 
         i = pEnt->index;
-        xfree(pEnt);
+        free(pEnt);
 
         nvProbeDDC(pScrn, i);
         return TRUE;
@@ -1503,7 +1503,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     xf86CollectOptions(pScrn, NULL);
 
     /* Process the options */
-    if (!(pNv->Options = xalloc(sizeof(NVOptions))))
+    if (!(pNv->Options = malloc(sizeof(NVOptions))))
 	return FALSE;
     memcpy(pNv->Options, NVOptions, sizeof(NVOptions));
     xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, pNv->Options);
@@ -2439,7 +2439,7 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     if(pNv->ShadowFB) {
  	pNv->ShadowPitch = BitmapBytePad(pScrn->bitsPerPixel * width);
-        pNv->ShadowPtr = xalloc(pNv->ShadowPitch * shadowHeight);
+        pNv->ShadowPtr = malloc(pNv->ShadowPitch * shadowHeight);
 	displayWidth = pNv->ShadowPitch / (pScrn->bitsPerPixel >> 3);
         FBStart = pNv->ShadowPtr;
     } else {

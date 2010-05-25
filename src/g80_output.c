@@ -291,7 +291,7 @@ G80I2CInit(ScrnInfoPtr pScrn, const char *name, const int port)
     if(xf86I2CBusInit(i2c)) {
         return i2c;
     } else {
-        xfree(i2c);
+        free(i2c);
         return NULL;
     }
 }
