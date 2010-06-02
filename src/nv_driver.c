@@ -33,11 +33,6 @@
 #include "xf86int10.h"
 #include "vbeModes.h"
 
-#ifdef HAVE_KMS
-#include <xf86drmMode.h>
-#include <dri.h>
-#endif
-
 const   OptionInfoRec * RivaAvailableOptions(int chipid, int busid);
 Bool    RivaGetScrnInfoRec(PciChipsets *chips, int chip);
 Bool    G80GetScrnInfoRec(PciChipsets *chips, int chip);
@@ -835,26 +830,6 @@ NVIsSupported(CARD32 id)
     return FALSE;
 }
 
-#ifdef HAVE_KMS
-static Bool NVKernelModesettingEnabled(struct pci_device *device)
-{
-    char *busIdString;
-    int ret;
-
-    if (!xf86LoaderCheckSymbol("DRICreatePCIBusID"))
-        return FALSE;
-
-    busIdString = DRICreatePCIBusID(device);
-
-    ret = drmCheckModesettingSupported(busIdString);
-    free(busIdString);
-
-    return (ret == 0);
-}
-#else
-static inline Bool NVKernelModesettingEnabled(struct pci_device *device) { return FALSE; }
-#endif //HAVE_KMS
-
 /* Mandatory */
 #if XSERVER_LIBPCIACCESS
 static Bool
@@ -894,14 +869,6 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
     xf86DrvMsg(0, X_PROBED,
                NV_NAME ": Found NVIDIA %s at %2.2x@%2.2x:%2.2x:%1.1x\n",
                name, dev->bus, dev->domain, dev->dev, dev->func);
-
-    /* Trying to bring up a NV mode while kernel modesetting is enabled
-       results in badness */
-    if (NVKernelModesettingEnabled(dev)) {
-        xf86Msg(X_ERROR,
-                NV_NAME ": Kernel modesetting driver in use, refusing to load\n");
-        return FALSE;
-    }
 
     if(NVIsG80(id))
         return G80GetScrnInfoRec(NULL, entity);

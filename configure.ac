@@ -134,17 +134,6 @@ AC_SUBST([modes_dir])
 AC_SUBST([XORG_CFLAGS])
 AC_SUBST([moduledir])
 
-if test "x$XSERVER_LIBPCIACCESS" = xyes; then
-    PKG_CHECK_MODULES(LIBDRM, [libdrm > 2.4.3 xf86driproto], HAVE_KMS="yes", HAVE_KMS="no")
-    if test "x$HAVE_KMS" = xyes; then
-        AC_DEFINE(HAVE_KMS, 1, [Have kernel modesetting])
-    else
-        AC_MSG_WARN(Support for detecting kernel modesetting drivers is not available.)
-        AC_MSG_WARN(This driver can cause display problems in the presence of kernel modesetting.)
-        AC_MSG_WARN(Please install libdrm > 2.4.3 and xf86driproto to enable KMS detection.)
-    fi
-fi
-
 DRIVER_NAME=nv
 AC_SUBST([DRIVER_NAME])
 
