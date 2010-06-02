@@ -841,9 +841,12 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
     const char *name = xf86TokenToString(NVKnownChipsets, id);
 
     if (pci_device_has_kernel_driver(dev)) {
-	ErrorF("The PCI device has a kernel module claiming it.\n");
-	ErrorF("This driver cannot operate until it has been unloaded\n");
-	return FALSE;
+        xf86DrvMsg(0, X_ERROR,
+                   NV_NAME ": The PCI device 0x%x (%s) at %2.2x@%2.2x:%2.2x:%1.1x has a kernel module claiming it.\n",
+                   id, name, dev->bus, dev->domain, dev->dev, dev->func);
+        xf86DrvMsg(0, X_ERROR,
+                   NV_NAME ": This driver cannot operate until it has been unloaded.\n");
+        return FALSE;
     }
 
     if(dev->vendor_id == PCI_VENDOR_NVIDIA && !name &&
