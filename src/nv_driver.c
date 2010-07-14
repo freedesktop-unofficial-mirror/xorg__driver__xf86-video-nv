@@ -842,7 +842,7 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
 
     if (pci_device_has_kernel_driver(dev)) {
         xf86DrvMsg(0, X_ERROR,
-                   NV_NAME ": The PCI device 0x%x (%s) at %2.2x@%2.2x:%2.2x:%1.1x has a kernel module claiming it.\n",
+                   NV_NAME ": The PCI device 0x%x (%s) at %2.2d@%2.2d:%2.2d:%1.1d has a kernel module claiming it.\n",
                    id, name, dev->bus, dev->domain, dev->dev, dev->func);
         xf86DrvMsg(0, X_ERROR,
                    NV_NAME ": This driver cannot operate until it has been unloaded.\n");
@@ -855,11 +855,11 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
         name = pci_device_get_device_name(dev);
         if(name)
             xf86DrvMsg(0, X_WARNING,
-                       NV_NAME ": Ignoring unsupported device 0x%x (%s) at %2.2x@%2.2x:%2.2x:%1.1x\n",
+                       NV_NAME ": Ignoring unsupported device 0x%x (%s) at %2.2d@%2.2d:%2.2d:%1.1d\n",
                        id, name, dev->bus, dev->domain, dev->dev, dev->func);
         else
             xf86DrvMsg(0, X_WARNING,
-                       NV_NAME ": Ignoring unsupported device 0x%x at %2.2x@%2.2x:%2.2x:%1.1x\n",
+                       NV_NAME ": Ignoring unsupported device 0x%x at %2.2d@%2.2d:%2.2d:%1.1d\n",
                        id, dev->bus, dev->domain, dev->dev, dev->func);
         return FALSE;
     }
@@ -870,7 +870,7 @@ NVPciProbe(DriverPtr drv, int entity, struct pci_device *dev, intptr_t data)
         name = "Unknown GPU";
 
     xf86DrvMsg(0, X_PROBED,
-               NV_NAME ": Found NVIDIA %s at %2.2x@%2.2x:%2.2x:%1.1x\n",
+               NV_NAME ": Found NVIDIA %s at %2.2d@%2.2d:%2.2d:%1.1d\n",
                name, dev->bus, dev->domain, dev->dev, dev->func);
 
     if(NVIsG80(id))
