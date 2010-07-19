@@ -125,7 +125,7 @@ _X_EXPORT DriverRec NV = {
 #endif
 };
 
-/* Known cards as of 2010/07/09 */
+/* Known cards as of 2010/07/19 */
 
 static SymTabRec NVKnownChipsets[] =
 {
@@ -563,6 +563,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE087E, "ION LE" },
   { 0x10DE087F, "ION LE" },
   { 0x10DE0A20, "GeForce GT 220" },
+  { 0x10DE0A22, "GeForce 315" },
   { 0x10DE0A23, "GeForce 210" },
   { 0x10DE0A28, "GeForce GT 230M" },
   { 0x10DE0A29, "GeForce GT 330M" },
@@ -579,6 +580,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0A64, "ION" },
   { 0x10DE0A65, "GeForce 210" },
   { 0x10DE0A66, "GeForce 310" },
+  { 0x10DE0A67, "GeForce 315" },
   { 0x10DE0A68, "GeForce G105M" },
   { 0x10DE0A69, "GeForce G105M" },
   { 0x10DE0A6A, "NVS 2100M" },
@@ -600,6 +602,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE0CA7, "GeForce GT 330" },
   { 0x10DE0CA8, "GeForce GTS 260M" },
   { 0x10DE0CA9, "GeForce GTS 250M" },
+  { 0x10DE0CAC, "GeForce 315" },
   { 0x10DE0CAF, "GeForce GT 335M" },
   { 0x10DE0CB0, "GeForce GTS 350M" },
   { 0x10DE0CB1, "GeForce GTS 360M" },
