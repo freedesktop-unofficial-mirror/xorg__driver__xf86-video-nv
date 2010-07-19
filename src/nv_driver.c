@@ -537,7 +537,7 @@ static SymTabRec NVKnownChipsets[] =
   { 0x10DE084B, "GeForce 9200" },
   { 0x10DE084C, "nForce 980a/780a SLI" },
   { 0x10DE084D, "nForce 750a SLI" },
-  { 0x10DE084F, "GeForce 8100 / nForce 720a"
+  { 0x10DE084F, "GeForce 8100 / nForce 720a" },
   { 0x10DE0860, "GeForce 9400" },
   { 0x10DE0861, "GeForce 9400" },
   { 0x10DE0862, "GeForce 9400M G" },
