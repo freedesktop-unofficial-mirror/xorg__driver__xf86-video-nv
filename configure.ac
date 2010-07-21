@@ -84,7 +84,6 @@ fi
 CFLAGS="$save_CFLAGS"
 
 # Substitutions
-AC_SUBST([XORG_CFLAGS])
 AC_SUBST([moduledir])
 
 DRIVER_NAME=nv
