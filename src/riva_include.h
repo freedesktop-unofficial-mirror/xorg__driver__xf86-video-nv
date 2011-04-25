@@ -50,7 +50,6 @@
 #include "vgaHW.h"
 
 #include "xf86Cursor.h"
-#include "xf86DDC.h"
 
 #include "region.h"
 

@@ -5,7 +5,6 @@
 #include <xf86Cursor.h>
 #include <xf86DDC.h>
 #include <xf86Crtc.h>
-#include <xf86int10.h>
 
 #define G80_NUM_I2C_PORTS 10
 
