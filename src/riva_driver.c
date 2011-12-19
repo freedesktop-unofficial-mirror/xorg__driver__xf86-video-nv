@@ -484,6 +484,7 @@ RivaPreInit(ScrnInfoPtr pScrn, int flags)
 	xf86FreeInt10(pRiva->pInt);
 	return FALSE;
     }
+    vgaHWSetStdFuncs(VGAHWPTR(pScrn));
     
     /* We use a programmable clock */
     pScrn->progClock = TRUE;
