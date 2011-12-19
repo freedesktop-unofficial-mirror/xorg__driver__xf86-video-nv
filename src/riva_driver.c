@@ -769,9 +769,9 @@ RivaPreInit(ScrnInfoPtr pScrn, int flags)
     /* Load XAA if needed */
     if (!pRiva->NoAccel) {
 	if (!xf86LoadSubModule(pScrn, "xaa")) {
-	    xf86FreeInt10(pRiva->pInt);
-	    RivaFreeRec(pScrn);
-	    return FALSE;
+	    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Falling back to shadowfb\n");
+	    pRiva->NoAccel = 1;
+	    pRiva->ShadowFB = 1;
 	}
     }
 
