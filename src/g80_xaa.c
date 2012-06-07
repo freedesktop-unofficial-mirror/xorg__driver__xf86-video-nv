@@ -486,7 +486,7 @@ G80DisableClipping(ScrnInfoPtr pScrn)
 Bool
 G80XAAInit(ScreenPtr pScreen)
 {
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     G80Ptr pNv = G80PTR(pScrn);
     XAAInfoRecPtr xaa;
 

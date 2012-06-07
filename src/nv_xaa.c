@@ -651,7 +651,7 @@ NVDisableClipping(ScrnInfoPtr pScrn)
 Bool
 NVAccelInit(ScreenPtr pScreen) 
 {
-   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+   ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
    NVPtr pNv = NVPTR(pScrn);
    XAAInfoRecPtr accel;
 

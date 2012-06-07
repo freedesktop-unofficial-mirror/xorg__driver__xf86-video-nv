@@ -127,7 +127,7 @@ SECOND_PASS:
 Bool
 RivaDGAInit(ScreenPtr pScreen)
 {   
-   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+   ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
    RivaPtr pRiva = RivaPTR(pScrn);
    DGAModePtr modes = NULL;
    int num = 0;
@@ -184,8 +184,8 @@ Riva_SetMode(
         memcpy(&pRiva->CurrentLayout, &SavedLayouts[index], sizeof(RivaFBLayout));
                 
       pScrn->currentMode = pRiva->CurrentLayout.mode;
-      RivaSwitchMode(index, pScrn->currentMode, 0);
-      RivaAdjustFrame(index, pScrn->frameX0, pScrn->frameY0, 0);
+      RivaSwitchMode(SWITCH_MODE_ARGS(pScrn, pScrn->currentMode));
+      RivaAdjustFrame(ADJUST_FRAME_ARGS(pScrn, pScrn->frameX0, pScrn->frameY0));
       pRiva->DGAactive = FALSE;
    } else {
       if(!pRiva->DGAactive) {  /* save the old parameters */
@@ -202,7 +202,7 @@ Riva_SetMode(
       pRiva->CurrentLayout.weight.green = BitsSet(pMode->green_mask);
       pRiva->CurrentLayout.weight.blue = BitsSet(pMode->blue_mask);
       /* RivaModeInit() will set the mode field */
-      RivaSwitchMode(index, pMode->mode, 0);
+      RivaSwitchMode(SWITCH_MODE_ARGS(pScrn, pMode->mode));
    }
    
    return TRUE;
@@ -227,7 +227,7 @@ Riva_SetViewport(
 ){
    RivaPtr pRiva = RivaPTR(pScrn);
 
-   RivaAdjustFrame(pScrn->pScreen->myNum, x, y, flags);
+   RivaAdjustFrame(ADJUST_FRAME_ARGS(pScrn, x, y));
 
    while(VGA_RD08(pRiva->riva.PCIO, 0x3da) & 0x08);
    while(!(VGA_RD08(pRiva->riva.PCIO, 0x3da) & 0x08));

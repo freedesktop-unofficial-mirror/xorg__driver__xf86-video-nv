@@ -457,7 +457,7 @@ Bool
 RivaAccelInit(ScreenPtr pScreen) 
 {
     XAAInfoRecPtr infoPtr;
-    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     RivaPtr pRiva = RivaPTR(pScrn);
 
     pRiva->AccelInfoRec = infoPtr = XAACreateInfoRec();

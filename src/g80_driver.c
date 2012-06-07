@@ -495,9 +495,9 @@ ReleaseDisplay(ScrnInfoPtr pScrn)
 }
 
 static Bool
-G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
+G80CloseScreen(CLOSE_SCREEN_ARGS_DECL)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     G80Ptr pNv = G80PTR(pScrn);
 
     if(pScrn->vtSema)
@@ -530,14 +530,14 @@ G80CloseScreen(int scrnIndex, ScreenPtr pScreen)
     pScrn->vtSema = FALSE;
     pScreen->CloseScreen = pNv->CloseScreen;
     pScreen->BlockHandler = pNv->BlockHandler;
-    return (*pScreen->CloseScreen)(scrnIndex, pScreen);
+    return (*pScreen->CloseScreen)(CLOSE_SCREEN_ARGS);
 }
 
 static void
-G80BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
+G80BlockHandler(BLOCKHANDLER_ARGS_DECL)
 {
-    ScreenPtr pScreen = screenInfo.screens[i];
-    ScrnInfoPtr pScrnInfo = xf86Screens[i];
+    SCREEN_PTR(arg);
+    ScrnInfoPtr pScrnInfo = xf86ScreenToScrn(pScreen);
     G80Ptr pNv = G80PTR(pScrnInfo);
 
     if(pNv->DMAKickoffCallback)
@@ -546,7 +546,7 @@ G80BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
     G80OutputResetCachedStatus(pScrnInfo);
 
     pScreen->BlockHandler = pNv->BlockHandler;
-    (*pScreen->BlockHandler) (i, blockData, pTimeout, pReadmask);
+    (*pScreen->BlockHandler) (BLOCKHANDLER_ARGS);
     pScreen->BlockHandler = G80BlockHandler;
 }
 
@@ -738,7 +738,7 @@ G80InitHW(ScrnInfoPtr pScrn)
 }
 
 static Bool
-G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
+G80ScreenInit(SCREEN_INIT_ARGS_DECL)
 {
     ScrnInfoPtr pScrn;
     G80Ptr pNv;
@@ -747,7 +747,7 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     BoxRec AvailFBArea;
 
     /* First get the ScrnInfoRec */
-    pScrn = xf86Screens[pScreen->myNum];
+    pScrn = xf86ScreenToScrn(pScreen);
     pNv = G80PTR(pScrn);
 
     pScrn->vtSema = TRUE;
@@ -885,27 +885,28 @@ G80ScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 }
 
 static void
-G80FreeScreen(int scrnIndex, int flags)
+G80FreeScreen(FREE_SCREEN_ARGS_DECL)
 {
-    G80FreeRec(xf86Screens[scrnIndex]);
+    SCRN_INFO_PTR(arg);
+    G80FreeRec(pScrn);
 }
 
 static Bool
-G80SwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
+G80SwitchMode(SWITCH_MODE_ARGS_DECL)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+    SCRN_INFO_PTR(arg);
     return xf86SetSingleMode(pScrn, mode, RR_Rotate_0);
 }
 
 static void
-G80AdjustFrame(int scrnIndex, int x, int y, int flags)
+G80AdjustFrame(ADJUST_FRAME_ARGS_DECL)
 {
 }
 
 static Bool
-G80EnterVT(int scrnIndex, int flags)
+G80EnterVT(VT_FUNC_ARGS_DECL)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+    SCRN_INFO_PTR(arg);
     G80Ptr pNv = G80PTR(pScrn);
 
     /* Reinit the hardware */
@@ -919,9 +920,9 @@ G80EnterVT(int scrnIndex, int flags)
 }
 
 static void
-G80LeaveVT(int scrnIndex, int flags)
+G80LeaveVT(VT_FUNC_ARGS_DECL)
 {
-    ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
+    SCRN_INFO_PTR(arg);
 
     ReleaseDisplay(pScrn);
 }

@@ -133,7 +133,7 @@ typedef struct {
     int                 numDGAModes;
     Bool                DGAactive;
     int                 DGAViewportStatus;
-    void		(*PointerMoved)(int index, int x, int y);
+    void		(*PointerMoved)(SCRN_ARG_TYPE arg, int x, int y);
     ScreenBlockHandlerProcPtr BlockHandler;
     CloseScreenProcPtr  CloseScreen;
     xf86EnableDisableFBAccessProc *EnableDisableFBAccess;
