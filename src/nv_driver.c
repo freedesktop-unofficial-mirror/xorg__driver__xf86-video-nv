@@ -1215,8 +1215,10 @@ NVCloseScreen(CLOSE_SCREEN_ARGS_DECL)
 
     NVUnmapMem(pScrn);
     vgaHWUnmapMem(pScrn);
+#ifdef HAVE_XAA_H
     if (pNv->AccelInfoRec)
         XAADestroyInfoRec(pNv->AccelInfoRec);
+#endif
     if (pNv->CursorInfoRec)
         xf86DestroyCursorInfoRec(pNv->CursorInfoRec);
     if (pNv->ShadowPtr)

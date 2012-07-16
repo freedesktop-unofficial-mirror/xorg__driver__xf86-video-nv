@@ -107,7 +107,11 @@ G80ResizeScreen(ScrnInfoPtr pScrn, int width, int height)
     pScrn->virtualY = height;
 
     /* Can resize if XAA is disabled or EXA is enabled */
-    if(!pNv->xaa || pNv->exa) {
+    if(
+#ifdef HAVE_XAA_H
+       !pNv->xaa ||
+#endif
+       pNv->exa) {
         (*pScrn->pScreen->GetScreenPixmap)(pScrn->pScreen)->devKind = pitch;
         pScrn->displayWidth = pitch / (pScrn->bitsPerPixel / 8);
 
@@ -503,8 +507,10 @@ G80CloseScreen(CLOSE_SCREEN_ARGS_DECL)
     if(pScrn->vtSema)
         ReleaseDisplay(pScrn);
 
+#ifdef HAVE_XAA_H
     if(pNv->xaa)
         XAADestroyInfoRec(pNv->xaa);
+#endif
     if(pNv->exa) {
         if(pNv->exaScreenArea) {
             exaOffscreenFree(pScreen, pNv->exaScreenArea);
@@ -850,6 +856,7 @@ G80ScreenInit(SCREEN_INIT_ARGS_DECL)
 
     xf86DPMSInit(pScreen, xf86DPMSSet, 0);
 
+#ifdef HAVE_XAA_H
     /* Clear the screen */
     if(pNv->xaa) {
         /* Use the acceleration engine */
@@ -857,7 +864,9 @@ G80ScreenInit(SCREEN_INIT_ARGS_DECL)
         pNv->xaa->SubsequentSolidFillRect(pScrn,
             0, 0, pScrn->displayWidth, pNv->offscreenHeight);
         G80DmaKickoff(pNv);
-    } else {
+    } else
+#endif
+    {
         /* Use a slow software clear path */
         memset(pNv->mem, 0, pitch * pNv->offscreenHeight);
     }
@@ -910,8 +919,10 @@ G80EnterVT(VT_FUNC_ARGS_DECL)
     G80Ptr pNv = G80PTR(pScrn);
 
     /* Reinit the hardware */
+#ifdef HAVE_XAA_H
     if(pNv->xaa)
         G80InitHW(pScrn);
+#endif
 
     if(!AcquireDisplay(pScrn))
         return FALSE;

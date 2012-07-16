@@ -39,7 +39,9 @@
 
 #include "fb.h"
 
+#ifdef HAVE_XAA_H
 #include "xaa.h"
+#endif
 #include "xf86cmap.h"
 #include "shadowfb.h"
 #include "fbdevhw.h"

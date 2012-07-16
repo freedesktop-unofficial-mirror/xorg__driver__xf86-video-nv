@@ -6,19 +6,22 @@
 #include "riva_include.h"
 #include "riva_type.h"
 #include "riva_proto.h"
+#ifdef HAVE_XAA_H
 #include "xaalocal.h"
+#endif
 #include "dgaproc.h"
-
 
 static Bool Riva_OpenFramebuffer(ScrnInfoPtr, char **, unsigned char **, 
 					int *, int *, int *);
 static Bool Riva_SetMode(ScrnInfoPtr, DGAModePtr);
 static int  Riva_GetViewport(ScrnInfoPtr);
 static void Riva_SetViewport(ScrnInfoPtr, int, int, int);
+#ifdef HAVE_XAA_H
 static void Riva_FillRect(ScrnInfoPtr, int, int, int, int, unsigned long);
 static void Riva_BlitRect(ScrnInfoPtr, int, int, int, int, int, int);
 static void Riva_BlitTransRect(ScrnInfoPtr, int, int, int, int, int, int, 
 					unsigned long);
+#endif
 
 static
 DGAFunctionRec Riva_DGAFuncs = {
@@ -28,9 +31,13 @@ DGAFunctionRec Riva_DGAFuncs = {
    Riva_SetViewport,
    Riva_GetViewport,
    RivaSync,
+#ifdef HAVE_XAA_H
    Riva_FillRect,
    Riva_BlitRect,
    Riva_BlitTransRect
+#else
+   NULL, NULL, NULL
+#endif
 };
 
 
@@ -80,8 +87,10 @@ SECOND_PASS:
 
 	    if(pixmap)
 		mode->flags |= DGA_PIXMAP_AVAILABLE;
+#ifdef HAVE_XAA_H
 	    if(!pRiva->NoAccel)
 		mode->flags |= DGA_FILL_RECT | DGA_BLIT_RECT;
+#endif
 	    if(pMode->Flags & V_DBLSCAN)
 		mode->flags |= DGA_DOUBLESCAN;
 	    if(pMode->Flags & V_INTERLACE)
@@ -235,6 +244,7 @@ Riva_SetViewport(
    pRiva->DGAViewportStatus = 0;  
 }
 
+#ifdef HAVE_XAA_H
 static void 
 Riva_FillRect (
    ScrnInfoPtr pScrn, 
@@ -284,7 +294,7 @@ Riva_BlitTransRect(
 ){
    /* not implemented... yet */
 }
-
+#endif
 
 static Bool 
 Riva_OpenFramebuffer(

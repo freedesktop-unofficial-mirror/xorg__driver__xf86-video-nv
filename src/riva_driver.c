@@ -257,8 +257,10 @@ RivaCloseScreen(CLOSE_SCREEN_ARGS_DECL)
 
     RivaUnmapMem(pScrn);
     vgaHWUnmapMem(pScrn);
+#ifdef HAVE_XAA_H
     if (pRiva->AccelInfoRec)
         XAADestroyInfoRec(pRiva->AccelInfoRec);
+#endif
     if (pRiva->CursorInfoRec)
         xf86DestroyCursorInfoRec(pRiva->CursorInfoRec);
     if (pRiva->ShadowPtr)
